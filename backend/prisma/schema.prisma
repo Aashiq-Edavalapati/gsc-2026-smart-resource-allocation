@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//
+// ---------- USERS ----------
+//
+
+enum UserRole {
+  USER
+  PLATFORM_ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+
+  authProvider  AuthProvider
+  providerId    String?
+  passwordHash  String?
+
+  role          UserRole @default(USER)
+  trustScore    Int      @default(0)
+
+  city          String?
+  lat           Float?
+  lng           Float?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  volunteerProfile VolunteerProfile?
+  memberships      OrganizationMember[]
+  reportedIssues   Issue[]
+}
+
+//
+// ---------- VOLUNTEERS ----------
+//
+
+model VolunteerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+
+  skills    String[] @default([])
+  availability Json?
+  trustScore Int     @default(0)
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  createdAt DateTime @default(now())
+}
+
+//
+// ---------- ORGANIZATIONS ----------
+//
+
+enum OrgType {
+  NGO
+  SOCIAL_GROUP
+}
+
+enum VerifyStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum BaseOrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  type        OrgType
+  description String?
+
+  city        String?
+  lat         Float?
+  lng         Float?
+
+  verificationStatus VerifyStatus @default(UNVERIFIED)
+  trustScore  Int @default(0)
+
+  registrationNumber String?
+  documents   String[] @default([])
+
+  members              OrganizationMember[]
+  ownedIssues          Issue[]
+  collaboratingIssues  Issue[] @relation("Collab")
+
+  createdAt   DateTime @default(now())
+}
+
+model OrganizationMember {
+  id              String @id @default(cuid())
+  userId          String
+  organizationId  String
+
+  baseRole        BaseOrgRole @default(MEMBER)
+  customRoleName  String?
+  status          MembershipStatus @default(ACTIVE)
+
+  user         User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  createdTasks Task[]
+
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+//
+// ---------- ISSUES ----------
+//
+
+enum IssueSource {
+  USER
+  ORG_MEMBER
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum IssueVerification {
+  UNVERIFIED
+  AI_VERIFIED
+  HUMAN_VERIFIED
+  FLAGGED
+}
+
+enum IssueCategory {
+  HEALTH
+  EDUCATION
+  SANITATION
+  ENVIRONMENT
+  WOMEN_AND_CHILD
+  DISASTER
+  FOOD
+  OTHER
+}
+
+model Issue {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+
+  category      IssueCategory
+  tags          String[] @default([])
+
+  urgency       Int
+  priorityScore Float?
+
+  status        IssueStatus @default(OPEN)
+  verification  IssueVerification @default(UNVERIFIED)
+
+  // PostGIS field
+  location      Unsupported("geometry(Point, 4326)")
+
+  city          String
+
+  reporterUserId String
+  reporterUser   User @relation(fields: [reporterUserId], references: [id])
+
+  ownerOrgId   String?
+  ownerOrg     Organization? @relation(fields: [ownerOrgId], references: [id])
+
+  collaboratingOrgs Organization[] @relation("Collab")
+
+  tasks        Task[]
+
+  createdAt    DateTime @default(now())
+
+  @@index([city])
+}
+
+//
+// ---------- TASKS ----------
+//
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  issueId     String
+
+  issue       Issue    @relation(fields: [issueId], references: [id])
+
+  title       String
+  description String?
+
+  requiredSkills String[] @default([])
+  volunteersNeeded Int
+
+  status      TaskStatus @default(OPEN)
+
+  createdByMembershipId String?
+  createdByMembership OrganizationMember? @relation(fields: [createdByMembershipId], references: [id])
+
+  assignments Assignment[]
+
+  createdAt   DateTime @default(now())
+}
+
+//
+// ---------- ASSIGNMENTS ----------
+//
+
+enum AssignmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  volunteerProfileId String
+  taskId      String
+
+  status      AssignmentStatus @default(PENDING)
+  matchScore  Float?
+
+  feedbackScore Int?
+
+  volunteer   VolunteerProfile @relation(fields: [volunteerProfileId], references: [id])
+  task        Task @relation(fields: [taskId], references: [id])
+
+  @@unique([volunteerProfileId, taskId])
+}
