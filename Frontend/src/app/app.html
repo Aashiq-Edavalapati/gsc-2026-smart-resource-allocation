@@ -1,11 +1,19 @@
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
-<!-- * * * * * * * * * * * The content below * * * * * * * * * * * -->
-<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * -->
-<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * -->
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
-<!-- * * * * * * * * * Delete the template below * * * * * * * * * -->
-<!-- * * * * * * * to get started with your project! * * * * * * * -->
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- Navigation Bar -->
+<div class="flex justify-between items-center p-4 bg-gray-800 text-white">
+  <h1>{{ title() }}</h1>
+  @if (authService.isLoggedIn()) {
+    <div class="flex items-center gap-4">
+      <span>{{ authService.getCurrentUser()?.email }}</span>
+      <button (click)="logout()" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700">
+        Logout
+      </button>
+    </div>
+  }
+</div>
+
+<!-- Main Content -->
+<router-outlet></router-outlet>
+
 
 <style>
   :host {

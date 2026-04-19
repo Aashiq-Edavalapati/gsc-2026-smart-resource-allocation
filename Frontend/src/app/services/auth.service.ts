@@ -1,15 +1,22 @@
-import { Injectable, inject } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { Injectable, signal } from '@angular/core';
+import {
+  Auth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from 'firebase/auth';
 import { firebaseAuth } from '../../firebase.config';
-import { signal, effect } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private auth: Auth = firebaseAuth;
-  
-  // Auth state signals
+  private apiUrl = 'http://localhost:5000/api/users';
+
   authUser = signal<any>(null);
   isLoggedIn = signal(false);
   isLoading = signal(true);
@@ -18,7 +25,6 @@ export class AuthService {
     this.initAuthListener();
   }
 
-  // Monitor auth state changes
   private initAuthListener() {
     onAuthStateChanged(this.auth, (user) => {
       this.authUser.set(user);
@@ -27,37 +33,87 @@ export class AuthService {
     });
   }
 
-  // Sign up
+  // ==================== EMAIL ====================
   async signup(email: string, password: string) {
     try {
       const result = await createUserWithEmailAndPassword(this.auth, email, password);
+      await this.syncWithBackend(result.user);
       return result.user;
     } catch (error: any) {
-      throw error.message;
+      throw this.getErrorMessage(error);
     }
   }
 
-  // Sign in
   async login(email: string, password: string) {
     try {
       const result = await signInWithEmailAndPassword(this.auth, email, password);
+      await this.syncWithBackend(result.user);
       return result.user;
     } catch (error: any) {
-      throw error.message;
+      throw this.getErrorMessage(error);
     }
   }
 
-  // Sign out
+  // ==================== GOOGLE ====================
+  async loginWithGoogle() {
+    try {
+      const result = await signInWithPopup(this.auth, new GoogleAuthProvider());
+      await this.syncWithBackend(result.user);
+      return result.user;
+    } catch (error: any) {
+      throw this.getErrorMessage(error);
+    }
+  }
+
+  // ==================== SYNC ====================
+  private async syncWithBackend(user: any) {
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${this.apiUrl}/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Backend sync failed');
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Backend sync error:', error);
+      throw error;
+    }
+  }
+
+  // ==================== GENERAL ====================
   async logout() {
     try {
       await signOut(this.auth);
     } catch (error: any) {
-      throw error.message;
+      throw this.getErrorMessage(error);
     }
   }
 
-  // Get current user
   getCurrentUser() {
     return this.authUser();
   }
+
+  private getErrorMessage(error: any): string {
+    const errorMap: Record<string, string> = {
+      'auth/user-not-found': 'No account found with this email',
+      'auth/wrong-password': 'Incorrect password',
+      'auth/email-already-in-use': 'Email already registered',
+      'auth/weak-password': 'Password must be at least 6 characters',
+      'auth/invalid-email': 'Please enter a valid email',
+      'auth/network-request-failed': 'Network error — check your connection',
+      'auth/too-many-requests': 'Too many failed attempts — try again later',
+    };
+
+    return errorMap[error.code] || error.message || 'Authentication failed';
+  }
 }
+
