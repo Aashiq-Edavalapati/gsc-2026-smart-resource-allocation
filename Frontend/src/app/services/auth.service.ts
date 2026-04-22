@@ -15,7 +15,7 @@ import { firebaseAuth } from '../../firebase.config';
 })
 export class AuthService {
   private auth: Auth = firebaseAuth;
-  private apiUrl = 'http://localhost:5000/api/users';
+  private apiUrl = 'http://localhost:5000/api/v1/users';
 
   authUser = signal<any>(null);
   isLoggedIn = signal(false);
