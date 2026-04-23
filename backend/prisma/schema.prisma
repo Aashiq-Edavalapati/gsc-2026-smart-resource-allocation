@@ -1,0 +1,449 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//
+// ---------- USERS ----------
+//
+
+enum UserRole {
+  USER
+  PLATFORM_ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+
+  authProvider  AuthProvider
+  providerId    String?
+  passwordHash  String?
+
+  role          UserRole @default(USER)
+  trustScore    Int      @default(0)
+
+  city          String?
+  lat           Float?
+  lng           Float?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  volunteerProfile VolunteerProfile?
+  memberships      OrganizationMember[]
+  reportedIssues   Issue[]
+
+  comments        Comment[]
+  notifications   Notification[]
+  deviceTokens    DeviceToken[]
+  trustLogs       TrustScoreLog[]
+
+  fieldReports    FieldReport[]
+}
+
+//
+// ---------- VOLUNTEERS ----------
+//
+
+model VolunteerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+
+  skills    String[] @default([])
+  availability Json?
+  trustScore Int     @default(0)
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  createdAt DateTime @default(now())
+}
+
+//
+// ---------- ORGANIZATIONS ----------
+//
+
+enum OrgType {
+  NGO
+  SOCIAL_GROUP
+}
+
+enum VerifyStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum BaseOrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  type        OrgType
+  description String?
+
+  city        String?
+  lat         Float?
+  lng         Float?
+
+  verificationStatus VerifyStatus @default(UNVERIFIED)
+  trustScore  Int @default(0)
+
+  registrationNumber String?
+  documents   String[] @default([])
+
+  members              OrganizationMember[]
+  ownedIssues          Issue[]
+  collaboratingIssues  Issue[] @relation("Collab")
+
+  invites      OrganizationInvite[]
+  trustLogs    TrustScoreLog[]
+
+  fieldReports FieldReport[]
+
+  createdAt   DateTime @default(now())
+}
+
+model OrganizationMember {
+  id              String @id @default(cuid())
+  userId          String
+  organizationId  String
+
+  baseRole        BaseOrgRole @default(MEMBER)
+  customRoleName  String?
+  status          MembershipStatus @default(ACTIVE)
+
+  user         User @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  createdTasks Task[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+model OrganizationInvite {
+  id String @id @default(cuid())
+
+  email String
+  organizationId String
+  role BaseOrgRole
+  status String
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+//
+// ---------- FIELD REPORTS (AI PIPELINE CORE) ----------
+//
+
+model FieldReport {
+  id        String @id @default(cuid())
+
+  createdByUserId String
+  createdByUser   User @relation(fields: [createdByUserId], references: [id])
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  title       String?
+  description String?
+
+  aiSummary   String? // AI generated summary
+
+  status      String @default("PROCESSING") // PROCESSING / COMPLETED / FAILED
+
+  media       FieldReportMedia[]
+  transcription Transcription?
+
+  issues      Issue[]
+
+  createdAt   DateTime @default(now())
+}
+
+model FieldReportMedia {
+  id String @id @default(cuid())
+
+  reportId String
+  report   FieldReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  url       String
+  type      String // AUDIO / VIDEO / IMAGE / DOCUMENT
+
+  createdAt DateTime @default(now())
+}
+
+model Transcription {
+  id String @id @default(cuid())
+
+  reportId String @unique
+  report   FieldReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  fullText String
+  language String?
+
+  segments TranscriptionSegment[]
+
+  createdAt DateTime @default(now())
+}
+
+model TranscriptionSegment {
+  id String @id @default(cuid())
+
+  transcriptionId String
+  transcription   Transcription @relation(fields: [transcriptionId], references: [id], onDelete: Cascade)
+
+  text String
+
+  startTime Float
+  endTime   Float
+}
+
+//
+// ---------- ISSUES ----------
+//
+
+enum IssueSource {
+  USER
+  ORG_MEMBER
+  FIELD_REPORT
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum IssueVerification {
+  UNVERIFIED
+  AI_VERIFIED
+  HUMAN_VERIFIED
+  FLAGGED
+}
+
+enum IssueCategory {
+  HEALTH
+  EDUCATION
+  SANITATION
+  ENVIRONMENT
+  WOMEN_AND_CHILD
+  DISASTER
+  FOOD
+  OTHER
+}
+
+model Issue {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+
+  category      IssueCategory
+  tags          String[] @default([])
+
+  urgency       Int
+  priorityScore Float?
+
+  status        IssueStatus @default(OPEN)
+  verification  IssueVerification @default(UNVERIFIED)
+
+  source        IssueSource @default(USER)
+  isPublic      Boolean @default(true)
+
+  location      Unsupported("geometry(Point, 4326)")
+  city          String
+
+  reporterUserId String
+  reporterUser   User @relation(fields: [reporterUserId], references: [id])
+
+  ownerOrgId   String?
+  ownerOrg     Organization? @relation(fields: [ownerOrgId], references: [id])
+
+  fieldReportId String?
+  fieldReport   FieldReport? @relation(fields: [fieldReportId], references: [id])
+
+  collaboratingOrgs Organization[] @relation("Collab")
+
+  tasks        Task[]
+  media        IssueMedia[]
+  comments     Comment[]
+
+  createdAt    DateTime @default(now())
+
+  @@index([city])
+}
+
+model IssueMedia {
+  id        String @id @default(cuid())
+
+  issueId   String
+  url       String
+  type      String
+
+  startTime Float?
+  endTime   Float?
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String @id @default(cuid())
+
+  issueId   String
+  userId    String
+
+  content   String
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+//
+// ---------- TASKS ----------
+//
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  issueId     String
+
+  issue       Issue    @relation(fields: [issueId], references: [id])
+
+  title       String
+  description String?
+
+  requiredSkills String[] @default([])
+  volunteersNeeded Int
+
+  status      TaskStatus @default(OPEN)
+
+  createdByMembershipId String?
+  createdByMembership OrganizationMember? @relation(fields: [createdByMembershipId], references: [id])
+
+  assignments Assignment[]
+
+  createdAt   DateTime @default(now())
+}
+
+//
+// ---------- ASSIGNMENTS ----------
+//
+
+enum AssignmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  volunteerProfileId String
+  taskId      String
+
+  status      AssignmentStatus @default(PENDING)
+  matchScore  Float?
+
+  feedbackScore Int?
+
+  volunteer   VolunteerProfile @relation(fields: [volunteerProfileId], references: [id])
+  task        Task @relation(fields: [taskId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([volunteerProfileId, taskId])
+}
+
+//
+// ---------- NOTIFICATIONS ----------
+//
+
+enum NotificationType {
+  ISSUE_NEARBY
+  TASK_CREATED
+  ASSIGNMENT_APPROVED
+  ASSIGNMENT_REJECTED
+  ISSUE_UPDATED
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  type      NotificationType
+  title     String
+  body      String
+
+  data      Json?
+
+  readAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  token     String   @unique
+
+  createdAt DateTime @default(now())
+}
+
+//
+// ---------- TRUST SCORE LOG ----------
+//
+
+model TrustScoreLog {
+  id        String   @id @default(cuid())
+
+  userId    String?
+  orgId     String?
+
+  change    Int
+  reason    String
+
+  user User? @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+}
