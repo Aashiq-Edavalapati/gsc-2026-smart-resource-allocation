@@ -1,29 +1,45 @@
-import { GoogleGenAI } from '@google/genai';
+// ===================== AI SERVICE =====================
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// TODO: Replace all mock implementations with real APIs:
+// - OCR → Google Vision API
+// - Transcription → Google Speech-to-Text
+// - Analysis → Gemini API
 
-export const classifyIssue = async (title, description) => {
-  const prompt = `
-    Analyze the following community issue report.
-    Title: ${title}
-    Description: ${description}
-    
-    Return ONLY a JSON object with the following keys:
-    - category: Must be one of [HEALTH, EDUCATION, SANITATION, ENVIRONMENT, WOMEN_AND_CHILD, DISASTER, FOOD, OTHER].
-    - urgency: Integer from 1 to 10.
-    - priorityScore: Float from 0.0 to 1.0 based on impact scale.
-    - summary: A clean, one-sentence summary.
-  `;
+export const ocr = async (fileUrl) => {
+  return {
+    text: "Extracted text from document",
+    language: "en"
+  };
+};
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text());
-  } catch (error) {
-    console.error("AI Classification Failed, falling back to defaults", error);
-    return { category: 'OTHER', urgency: 5, priorityScore: 0.5, summary: title };
-  }
+export const transcribe = async (fileUrl) => {
+  return {
+    text: "Transcribed speech text",
+    segments: [
+      { text: "Sample", start: 0, end: 5 }
+    ]
+  };
+};
+
+export const analyzeSurvey = async (data) => {
+  return {
+    issues: [
+      {
+        title: "Water shortage",
+        description: "No clean water available",
+        category: "SANITATION",
+        urgency: 8,
+        priorityScore: 7.5
+      }
+    ]
+  };
+};
+
+export const classifyIssue = async (text) => {
+  return {
+    category: "SANITATION",
+    urgency: 7,
+    priorityScore: 6.5,
+    summary: "Issue classified"
+  };
 };

@@ -1,9 +1,9 @@
 import prisma from '../config/db.js';
-import { sendNotification } from './notification.service.js';
+import { sendToDevice } from './notification.service.js';
 
-// ---------- CREATE TASK ----------
+// ---------- CREATE ----------
 export const createTask = async (issueId, membershipId, data) => {
-  return prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       issueId,
       title: data.title,
@@ -13,6 +13,9 @@ export const createTask = async (issueId, membershipId, data) => {
       createdByMembershipId: membershipId
     }
   });
+
+  // TODO: Notify nearby volunteers (smart matching)
+  return task;
 };
 
 // ---------- GET ----------
@@ -47,9 +50,7 @@ export const getApplicants = (taskId) => {
 export const getRecommendedVolunteers = async (taskId) => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: {
-      issue: true
-    }
+    include: { issue: true }
   });
 
   if (!task) throw new Error('Task not found');
@@ -58,17 +59,15 @@ export const getRecommendedVolunteers = async (taskId) => {
     include: { user: true }
   });
 
+  // TODO: Replace with PostGIS-based distance calculation + availability filtering
+
   return volunteers
     .map(v => {
       const skillMatch = task.requiredSkills.filter(s =>
         v.skills.includes(s)
       ).length;
 
-      const distanceScore = calculateDistanceScore(
-        task.issue,
-        v.user
-      );
-
+      const distanceScore = calculateDistanceScore(task.issue, v.user);
       const trustScore = v.trustScore;
 
       const score =
@@ -76,10 +75,7 @@ export const getRecommendedVolunteers = async (taskId) => {
         distanceScore * 3 +
         trustScore * 0.2;
 
-      return {
-        volunteer: v,
-        score
-      };
+      return { volunteer: v, score };
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
@@ -93,24 +89,43 @@ export const applyToTask = async (userId, taskId) => {
 
   if (!volunteer) throw new Error('Not a volunteer');
 
-  return prisma.assignment.create({
+  const existing = await prisma.assignment.findUnique({
+    where: {
+      volunteerProfileId_taskId: {
+        volunteerProfileId: volunteer.id,
+        taskId
+      }
+    }
+  });
+
+  if (existing) throw new Error("Already applied");
+
+  const assignment = await prisma.assignment.create({
     data: {
       volunteerProfileId: volunteer.id,
       taskId,
       status: 'PENDING'
     }
   });
+
+  // TODO: Notify org admins about new applicant
+
+  return assignment;
 };
 
 // ---------- ASSIGNMENT ----------
 export const getAssignment = async (userId, assignmentId) => {
-  return prisma.assignment.findUnique({
+  const assignment = await prisma.assignment.findUnique({
     where: { id: assignmentId },
     include: {
       task: true,
       volunteer: { include: { user: true } }
     }
   });
+
+  if (!assignment) throw new Error("Not found");
+
+  return assignment;
 };
 
 export const updateAssignment = async (userId, assignmentId, data) => {
@@ -121,28 +136,31 @@ export const updateAssignment = async (userId, assignmentId, data) => {
 
   if (!assignment) throw new Error('Not found');
 
-  const updated = await prisma.assignment.update({
-    where: { id: assignmentId },
-    data
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.assignment.update({
+      where: { id: assignmentId },
+      data
+    });
+
+    if (data.status === 'COMPLETED') {
+      await tx.volunteerProfile.update({
+        where: { id: assignment.volunteerProfileId },
+        data: { trustScore: { increment: 10 } }
+      });
+
+      await tx.trustScoreLog.create({
+        data: {
+          userId: assignment.volunteer.userId,
+          change: 10,
+          reason: 'TASK_COMPLETED'
+        }
+      });
+    }
+
+    // TODO: Notify volunteer on approval/rejection/completion
+
+    return updated;
   });
-
-  // ---------- TRUST SCORE ----------
-  if (data.status === 'COMPLETED') {
-    await prisma.volunteerProfile.update({
-      where: { id: assignment.volunteerProfileId },
-      data: { trustScore: { increment: 10 } }
-    });
-
-    await prisma.trustScoreLog.create({
-      data: {
-        userId: assignment.volunteer.userId,
-        change: 10,
-        reason: 'TASK_COMPLETED'
-      }
-    });
-  }
-
-  return updated;
 };
 
 // ---------- VOLUNTEER ----------
@@ -150,6 +168,8 @@ export const getMyAssignments = async (userId) => {
   const volunteer = await prisma.volunteerProfile.findUnique({
     where: { userId }
   });
+
+  if (!volunteer) throw new Error("Not a volunteer");
 
   return prisma.assignment.findMany({
     where: { volunteerProfileId: volunteer.id },
@@ -159,12 +179,9 @@ export const getMyAssignments = async (userId) => {
 
 // ---------- UTILS ----------
 const calculateDistanceScore = (issue, user) => {
-  if (!issue || !user.lat) return 0;
+  // TODO: Replace with PostGIS distance calculation
+  if (!issue || !user.lat || !user.lng) return 0;
 
-  const dx = issue.lat - user.lat;
-  const dy = issue.lng - user.lng;
-
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  return Math.max(0, 10 - dist);
+  // fallback mock logic
+  return 5;
 };

@@ -4,9 +4,23 @@ import { notifyNearestNGO } from './notification.service.js';
 
 // ---------- CREATE ----------
 export const createIssue = async (userId, data, isPublic) => {
-  const ai = await classifyIssue(data.title, data.description);
+  const ai = await classifyIssue(`${data.title} ${data.description}`);
 
-  return prisma.$transaction(async (tx) => {
+  const issue = await prisma.$transaction(async (tx) => {
+
+    if (data.ownerOrgId) {
+      const membership = await tx.organizationMember.findFirst({
+        where: {
+          organizationId: data.ownerOrgId,
+          userId
+        }
+      });
+
+      if (!membership) {
+        throw new Error("Not part of organization");
+      }
+    }
+
     const issue = await tx.issue.create({
       data: {
         title: data.title,
@@ -31,18 +45,21 @@ export const createIssue = async (userId, data, isPublic) => {
       `;
     }
 
-    if (isPublic && data.lat && data.lng) {
-      await notifyNearestNGO(data.lat, data.lng, issue.id);
-    }
-
     return issue;
   });
+
+  if (isPublic && data.lat && data.lng) {
+    await notifyNearestNGO(data.lat, data.lng, issue.id);
+  }
+
+  return issue;
 };
 
 // ---------- READ ----------
 export const getIssues = (filters) => {
   return prisma.issue.findMany({
     where: {
+      deletedAt: null,
       ...(filters.city && { city: filters.city }),
       ...(filters.category && { category: filters.category }),
       ...(filters.status && { status: filters.status })
@@ -57,7 +74,8 @@ export const getNearbyIssues = (lat, lng, radius) => {
       ST_X(location::geometry) as lng,
       ST_Y(location::geometry) as lat
     FROM "Issue"
-    WHERE ST_DWithin(
+    WHERE location IS NOT NULL
+    AND ST_DWithin(
       location::geography,
       ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
       ${radius}
@@ -66,7 +84,7 @@ export const getNearbyIssues = (lat, lng, radius) => {
 };
 
 export const getIssueById = async (id) => {
-  const issue = await prisma.issue.findUnique({
+  return prisma.issue.findUnique({
     where: { id },
     include: {
       ownerOrg: true,
@@ -74,8 +92,6 @@ export const getIssueById = async (id) => {
       media: true
     }
   });
-
-  return issue;
 };
 
 export const getHeatmap = () => {
@@ -85,6 +101,7 @@ export const getHeatmap = () => {
       ST_Y(location::geometry) as lat
     FROM "Issue"
     WHERE status != 'RESOLVED'
+    AND location IS NOT NULL
   `;
 };
 
@@ -92,9 +109,8 @@ export const getHeatmap = () => {
 export const updateIssue = async (userId, issueId, data) => {
   const issue = await prisma.issue.findUnique({ where: { id: issueId } });
 
-  if (issue.reporterUserId !== userId) {
-    throw new Error('Unauthorized');
-  }
+  if (!issue) throw new Error("Issue not found");
+  if (issue.reporterUserId !== userId) throw new Error("Unauthorized");
 
   return prisma.issue.update({
     where: { id: issueId },
@@ -106,9 +122,8 @@ export const updateIssue = async (userId, issueId, data) => {
 export const verifyIssue = async (userId, issueId, orgId) => {
   const issue = await prisma.issue.findUnique({ where: { id: issueId } });
 
-  if (issue.ownerOrgId !== orgId) {
-    throw new Error('Not your organization issue');
-  }
+  if (!issue) throw new Error("Issue not found");
+  if (issue.ownerOrgId !== orgId) throw new Error("Unauthorized");
 
   return prisma.issue.update({
     where: { id: issueId },
@@ -116,23 +131,6 @@ export const verifyIssue = async (userId, issueId, orgId) => {
       verification: 'HUMAN_VERIFIED',
       status: 'IN_PROGRESS'
     }
-  });
-};
-
-// ---------- COLLAB ----------
-export const addCollaborator = (issueId, orgId) => {
-  return prisma.issue.update({
-    where: { id: issueId },
-    data: {
-      collaboratingOrgs: { connect: { id: orgId } }
-    }
-  });
-};
-
-export const getCollaborators = (issueId) => {
-  return prisma.issue.findUnique({
-    where: { id: issueId },
-    select: { collaboratingOrgs: true }
   });
 };
 
@@ -150,17 +148,27 @@ export const getComments = (issueId) => {
   });
 };
 
-export const updateComment = (id, userId, content) => {
+export const updateComment = async (id, userId, content) => {
+  const comment = await prisma.comment.findUnique({ where: { id } });
+
+  if (!comment || comment.userId !== userId) {
+    throw new Error("Unauthorized");
+  }
+
   return prisma.comment.update({
-    where: { id, userId },
+    where: { id },
     data: { content }
   });
 };
 
-export const deleteComment = (id, userId) => {
-  return prisma.comment.delete({
-    where: { id, userId }
-  });
+export const deleteComment = async (id, userId) => {
+  const comment = await prisma.comment.findUnique({ where: { id } });
+
+  if (!comment || comment.userId !== userId) {
+    throw new Error("Unauthorized");
+  }
+
+  return prisma.comment.delete({ where: { id } });
 };
 
 // ---------- MEDIA ----------
