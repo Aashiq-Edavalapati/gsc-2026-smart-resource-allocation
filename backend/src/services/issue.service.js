@@ -1,71 +1,67 @@
-import prisma from "../config/db.js";
-import { classifyIssue } from "./ai.service.js";
-import { notifyNearestNGO, sendToDevice } from "./notification.service.js";
+import prisma from '../config/db.js';
+import { classifyIssue } from './ai.service.js';
+import { notifyNearestNGO } from './notification.service.js';
 
-export const createIssue = async (userId, data, isPublicReport = false) => {
-  // 1. Classify with Gemini
-  const aiData = await classifyIssue(data.title, data.description);
+// ---------- CREATE ----------
+export const createIssue = async (userId, data, isPublic) => {
+  const ai = await classifyIssue(data.title, data.description);
 
-  // 2. Insert Issue. Note: Prisma can't directly insert PostGIS Point objects nicely, 
-  // so we create the record, then execute a raw update for the geometry.
-  const issue = await prisma.issue.create({
-    data: {
-      title: data.title,
-      description: aiData.summary || data.description,
-      category: aiData.category,
-      urgency: aiData.urgency,
-      priorityScore: aiData.priorityScore,
-      source: isPublicReport ? 'USER' : (data.source || 'USER'),
-      city: data.city,
-      reporterUserId: userId,
-      ownerOrgId: data.ownerOrgId || null,
-      tags: data.tags || [],
+  return prisma.$transaction(async (tx) => {
+    const issue = await tx.issue.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        aiSummary: ai.summary,
+        category: ai.category,
+        urgency: ai.urgency,
+        priorityScore: ai.priorityScore,
+        city: data.city,
+        reporterUserId: userId,
+        ownerOrgId: data.ownerOrgId || null,
+        source: isPublic ? 'USER' : 'ORG_MEMBER',
+        fieldReportId: data.fieldReportId || null
+      }
+    });
+
+    if (data.lat && data.lng) {
+      await tx.$executeRaw`
+        UPDATE "Issue"
+        SET location = ST_SetSRID(ST_MakePoint(${data.lng}, ${data.lat}), 4326)
+        WHERE id = ${issue.id}
+      `;
     }
+
+    if (isPublic && data.lat && data.lng) {
+      await notifyNearestNGO(data.lat, data.lng, issue.id);
+    }
+
+    return issue;
   });
-
-  // 3. Set Geometry using Raw SQL
-  if (data.lat && data.lng) {
-    await prisma.$executeRaw`
-      UPDATE "Issue" 
-      SET location = ST_SetSRID(ST_MakePoint(${data.lng}, ${data.lat}), 4326) 
-      WHERE id = ${issue.id}
-    `;
-  }
-
-  // 4. Trigger workflow for public reports
-  if (isPublicReport && data.lat && data.lng) {
-    await notifyNearestNGO(data.lat, data.lng, issue.id);
-  }
-
-  return issue;
 };
 
-export const getIssues = async (filters) => {
-  const { city, category, status, verification, page = 1, limit = 20 } = filters;
-  const skip = (page - 1) * limit;
-
-  // We exclude the 'location' field from the standard Prisma select because it throws on Unsupported types
+// ---------- READ ----------
+export const getIssues = (filters) => {
   return prisma.issue.findMany({
     where: {
-      ...(city && { city }),
-      ...(category && { category }),
-      ...(status && { status }),
-      ...(verification && { verification })
+      ...(filters.city && { city: filters.city }),
+      ...(filters.category && { category: filters.category }),
+      ...(filters.status && { status: filters.status })
     },
-    skip,
-    take: Number(limit),
     orderBy: { createdAt: 'desc' }
   });
 };
 
-export const getNearbyIssues = async (lat, lng, radiusMeters) => {
-  // Direct PostGIS ST_DWithin query returning coordinates
+export const getNearbyIssues = (lat, lng, radius) => {
   return prisma.$queryRaw`
-    SELECT id, title, category, urgency, status, "priorityScore", city,
-           ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat
+    SELECT id, title, urgency,
+      ST_X(location::geometry) as lng,
+      ST_Y(location::geometry) as lat
     FROM "Issue"
-    WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(${parseFloat(lng)}, ${parseFloat(lat)}), 4326), ${parseFloat(radiusMeters)})
-    ORDER BY urgency DESC
+    WHERE ST_DWithin(
+      location::geography,
+      ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+      ${radius}
+    )
   `;
 };
 
@@ -73,84 +69,107 @@ export const getIssueById = async (id) => {
   const issue = await prisma.issue.findUnique({
     where: { id },
     include: {
-      reporterUser: { select: { id: true, name: true } },
-      ownerOrg: { select: { id: true, name: true, verificationStatus: true } },
-      collaboratingOrgs: { select: { id: true, name: true } },
+      ownerOrg: true,
+      collaboratingOrgs: true,
       media: true
     }
   });
 
-  // Fetch coordinates separately if needed
-  const coords = await prisma.$queryRaw`SELECT ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat FROM "Issue" WHERE id = ${id}`;
-  if (coords.length) {
-    issue.lat = coords[0].lat;
-    issue.lng = coords[0].lng;
-  }
-
   return issue;
 };
 
-export const updateIssue = async (id, data) => {
-  return prisma.issue.update({ where: { id }, data });
-};
-
-export const verifyIssue = async (id, orgId) => {
-  const issue = await prisma.issue.update({
-    where: { id },
-    data: { verification: 'HUMAN_VERIFIED', status: 'IN_PROGRESS' }
-  });
-
-  // TODO: Trigger Notification to volunteers in the area that verification happened
-  return issue;
-};
-
-export const getHeatmap = async () => {
+export const getHeatmap = () => {
   return prisma.$queryRaw`
-    SELECT id, urgency, ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat
+    SELECT urgency,
+      ST_X(location::geometry) as lng,
+      ST_Y(location::geometry) as lat
     FROM "Issue"
-    WHERE status != 'RESOLVED' AND location IS NOT NULL
+    WHERE status != 'RESOLVED'
   `;
 };
 
-// --- Collaborations ---
-export const addCollaborator = async (issueId, orgId) => {
+// ---------- UPDATE ----------
+export const updateIssue = async (userId, issueId, data) => {
+  const issue = await prisma.issue.findUnique({ where: { id: issueId } });
+
+  if (issue.reporterUserId !== userId) {
+    throw new Error('Unauthorized');
+  }
+
   return prisma.issue.update({
     where: { id: issueId },
-    data: { collaboratingOrgs: { connect: { id: orgId } } }
+    data
   });
 };
 
-// --- Comments ---
-export const addComment = async (issueId, userId, content) => {
-  return prisma.comment.create({ data: { issueId, userId, content } });
+// ---------- VERIFY ----------
+export const verifyIssue = async (userId, issueId, orgId) => {
+  const issue = await prisma.issue.findUnique({ where: { id: issueId } });
+
+  if (issue.ownerOrgId !== orgId) {
+    throw new Error('Not your organization issue');
+  }
+
+  return prisma.issue.update({
+    where: { id: issueId },
+    data: {
+      verification: 'HUMAN_VERIFIED',
+      status: 'IN_PROGRESS'
+    }
+  });
 };
 
-export const getComments = async (issueId) => {
+// ---------- COLLAB ----------
+export const addCollaborator = (issueId, orgId) => {
+  return prisma.issue.update({
+    where: { id: issueId },
+    data: {
+      collaboratingOrgs: { connect: { id: orgId } }
+    }
+  });
+};
+
+export const getCollaborators = (issueId) => {
+  return prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { collaboratingOrgs: true }
+  });
+};
+
+// ---------- COMMENTS ----------
+export const addComment = (issueId, userId, content) => {
+  return prisma.comment.create({
+    data: { issueId, userId, content }
+  });
+};
+
+export const getComments = (issueId) => {
   return prisma.comment.findMany({
     where: { issueId },
-    include: { user: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'asc' }
+    include: { user: true }
   });
 };
 
-export const updateComment = async (commentId, userId, content) => {
+export const updateComment = (id, userId, content) => {
   return prisma.comment.update({
-    where: { id: commentId, userId }, // Ensures user owns comment
+    where: { id, userId },
     data: { content }
   });
 };
 
-export const deleteComment = async (commentId, userId) => {
-  return prisma.comment.delete({ where: { id: commentId, userId } });
-};
-
-// --- Media ---
-export const addMedia = async (issueId, data) => {
-  return prisma.issueMedia.create({
-    data: { issueId, url: data.url, type: data.type, startTime: data.startTime, endTime: data.endTime }
+export const deleteComment = (id, userId) => {
+  return prisma.comment.delete({
+    where: { id, userId }
   });
 };
 
-export const deleteMedia = async (mediaId) => {
-  return prisma.issueMedia.delete({ where: { id: mediaId } });
+// ---------- MEDIA ----------
+export const addMedia = (issueId, data) => {
+  return prisma.issueMedia.create({
+    data: { issueId, ...data }
+  });
+};
+
+export const deleteMedia = (id) => {
+  return prisma.issueMedia.delete({ where: { id } });
 };
