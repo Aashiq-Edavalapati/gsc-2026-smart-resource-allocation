@@ -1,10 +1,9 @@
 node_modules
-# Keep environment variables out of version control
 .env
 
 /generated/prisma
 
-# Firebase service account keys (SECURITY - NEVER COMMIT)
 *-firebase-adminsdk-*.json
+firebase-service-account.json
 gsc-2026-fea7c-firebase-adminsdk-fbsvc-fb71fee9ba.json
-
+gsc-2026-fea7c-firebase-adminsdk-fbsvc-9ed02d90a7.json

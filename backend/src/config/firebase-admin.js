@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const serviceAccount = JSON.parse(
   readFileSync(
-    resolve(__dirname, '../../gsc-2026-fea7c-firebase-adminsdk-fbsvc-fb71fee9ba.json'),
+    resolve(__dirname, '../../firebase-service-account.json'),
     'utf8'
   )
 );
