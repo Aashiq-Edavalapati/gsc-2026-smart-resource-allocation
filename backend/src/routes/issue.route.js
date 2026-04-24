@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { verifyFirebaseToken } from '../middleware/auth.js';
-import { requireOrgRole } from '../middleware/orgAuth.js';
 import * as issueController from '../controllers/issue.controller.js';
 
 const router = Router();
@@ -25,7 +24,7 @@ router.patch('/:id', issueController.updateIssue);
 router.post('/:id/verify', issueController.verifyIssue);
 
 // ---------- COLLABORATION (ORG ONLY) ----------
-router.post('/:id/collaborate', requireOrgRole(['OWNER', 'ADMIN']), issueController.addCollaborator);
+router.post('/:id/collaborate', issueController.addCollaborator);
 
 // ---------- COMMENTS ----------
 router.post('/:id/comments', issueController.addComment);
