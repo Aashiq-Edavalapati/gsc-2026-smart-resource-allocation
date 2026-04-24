@@ -6,6 +6,13 @@ const router = Router();
 
 router.post('/', upload.single('file'), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'File is required',
+      });
+    }
+
     const result = await uploadFile(req.file.path);
 
     res.json({
@@ -13,8 +20,12 @@ router.post('/', upload.single('file'), async (req, res) => {
       data: result,
     });
   } catch (err) {
-    console.log("Error: ", err);
-    res.status(500).json({ error: 'Upload failed' });
+    console.error('Upload Error:', err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Upload failed',
+    });
   }
 });
 
