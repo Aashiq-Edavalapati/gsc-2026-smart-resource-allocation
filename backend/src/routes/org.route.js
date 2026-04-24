@@ -9,8 +9,8 @@ const router = Router();
 router.get('/', orgController.listOrgs);
 
 // STATIC ROUTES FIRST (avoid shadowing)
-router.get('/invites', orgController.getUserInvites);
-router.post('/invites/:inviteId/accept', orgController.acceptOrgInvite);
+router.get('/invites', verifyFirebaseToken, orgController.getUserInvites);
+router.post('/invites/:inviteId/accept', verifyFirebaseToken, orgController.acceptOrgInvite);
 
 // ---------- DYNAMIC PUBLIC ----------
 router.get('/:id', orgController.getOrg);

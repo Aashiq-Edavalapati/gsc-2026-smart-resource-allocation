@@ -25,8 +25,8 @@ protectedRouter.post("/volunteer-profile", upsertVolunteerProfile);
 protectedRouter.post("/fcm-token", registerDeviceToken);
 protectedRouter.get("/trust-score/history", getTrustScoreHistory);
 
-router.use("/", protectedRouter);
+protectedRouter.get('/:id', getUserById);
 
-router.get("/:id", getUserById);
+router.use("/", protectedRouter);
 
 export default router;
