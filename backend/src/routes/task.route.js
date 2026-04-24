@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middleware/auth.js';
 import { requireOrgRole } from '../middleware/orgAuth.js';
 import * as taskController from '../controllers/task.controller.js';
 
@@ -9,7 +9,7 @@ const router = Router();
 router.get('/issues/:issueId/tasks', taskController.getTasksByIssue);
 
 // ---------- AUTH ----------
-router.use(authenticate);
+router.use(verifyFirebaseToken);
 
 // ---------- TASK CREATION ----------
 router.post(
