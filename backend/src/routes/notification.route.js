@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyFirebaseToken } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middlewares/auth.js';
 import * as notificationController from '../controllers/notification.controller.js';
 
 const router = Router();

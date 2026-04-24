@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyFirebaseToken } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middlewares/auth.js';
 import { getPendingOrgs, getStats, verifyOrg } from '../controllers/admin.controller.js';
 
 // Note: You need a middleware here to ensure req.user.role === 'PLATFORM_ADMIN'
