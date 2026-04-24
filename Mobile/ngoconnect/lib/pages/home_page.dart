@@ -42,11 +42,12 @@ class _HomePageState extends State<HomePage> {
           child: const MainTitleBar(),
         ),
       ),
-      body: Stack(
-        children: [
-          // ---------------------------------------------------
-          // 1. BASE LAYER: Content
-          // ---------------------------------------------------
+      body: SizedBox.expand(
+        child: Stack(
+          children: [
+            // ---------------------------------------------------
+            // 1. BASE LAYER: Content
+            // ---------------------------------------------------
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: padding),
@@ -63,44 +64,47 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 10),
                 Flexible(
-                  flex: 7,
                   fit: FlexFit.loose,
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAFAFA),
-                      borderRadius: BorderRadius.circular(32),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: size.height * 0.7,
                     ),
-                    child: ListView(
-                      shrinkWrap: true,
-                      // Extra bottom padding so the list items don't hide behind the floating button permanently
-                      padding: const EdgeInsets.only(
-                        top: 8, 
-                        bottom: buttonHeight + (padding * 2),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.circular(32),
                       ),
-                      children: [
-                        HistoryCard(
-                          title: "Community Outreach",
-                          duration: "04:20",
-                          photoCount: 3,
-                          videoCount: 1,
-                          onViewTap: () {},
-                        ),
-                        HistoryCard(
-                          title: "Resource Allocation",
-                          duration: "10:15",
-                          photoCount: 5,
-                          onViewTap: () {},
-                        ),
-                        HistoryCard(
-                          title: "Donation Drive",
-                          duration: "02:45",
-                          videoCount: 2,
-                          onViewTap: () {},
-                        ),
-                      ],
+                      child: ListView(
+                        shrinkWrap: true,
+                        // Removed bottom padding from here so Container shrinks correctly
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        children: [
+                          HistoryCard(
+                            title: "Community Outreach",
+                            duration: "04:20",
+                            photoCount: 3,
+                            videoCount: 1,
+                            onViewTap: () {},
+                          ),
+                          HistoryCard(
+                            title: "Resource Allocation",
+                            duration: "10:15",
+                            photoCount: 5,
+                            onViewTap: () {},
+                          ),
+                          HistoryCard(
+                            title: "Donation Drive",
+                            duration: "02:45",
+                            videoCount: 2,
+                            onViewTap: () {},
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 180), // Space for nav bar + recording button
                 ],
               ),
             ),
@@ -133,15 +137,16 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: Colors.black.withOpacity(0.05)),
                       ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.image_outlined, color: Colors.black26, size: 40),
-                            SizedBox(height: 8),
-                            Text("Thumbnail Preview", style: TextStyle(color: Colors.black26)),
-                          ],
-                        ),
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        children: [
+                          _buildThumbnailBox(),
+                          _buildThumbnailBox(),
+                          _buildThumbnailBox(),
+                          _buildThumbnailBox(),
+                          _buildThumbnailBox(),
+                        ],
                       ),
                     ),
                       
@@ -201,11 +206,27 @@ class _HomePageState extends State<HomePage> {
               ),
           ),
 
+          // ---------------------------------------------------
+          // 3. FLOATING NAV BAR
+          // ---------------------------------------------------
           AnimatedPositioned(
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeOutCubic,
-            // If closed: Anchor to bottom padding. If open: Snap to absolute bottom
-            bottom: _isRecordingMode ? 0 : padding,
+            bottom: _isRecordingMode ? -100 : padding, // Slide down completely offscreen when recording
+            left: padding,
+            right: padding,
+            height: 70, // Required for proper AnimatedPositioned bounds!
+            child: _buildFloatingNavBar(),
+          ),
+
+          // ---------------------------------------------------
+          // 4. BOTTOM LAYER (Transforms from Button)
+          // ---------------------------------------------------
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            // If closed: Anchor above bottom nav bar. If open: Snap to absolute bottom
+            bottom: _isRecordingMode ? 0 : padding + 85,
             left: _isRecordingMode ? 0 : padding,
             right: _isRecordingMode ? 0 : padding,
             height: _isRecordingMode ? null : buttonHeight, // null height allows it to fit content
@@ -242,6 +263,25 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ), // Closes Stack
+    ), // Closes SizedBox.expand
+    ); // Closes Scaffold
+  }
+
+  Widget _buildThumbnailBox() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Icon(Icons.image_outlined, color: Colors.black26, size: 32),
+          ),
+        ),
       ),
     );
   }
@@ -401,6 +441,55 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  // Floating Navigation Bar UI
+  Widget _buildFloatingNavBar() {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildNavItem(Icons.home_rounded, "Home", true),
+          _buildNavItem(Icons.notifications_none_rounded, "Alerts", false),
+          _buildNavItem(Icons.history_rounded, "History", false),
+          _buildNavItem(Icons.person_outline_rounded, "Profile", false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isSelected) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon, 
+          color: isSelected ? const Color(0xFF68417E) : Colors.black38,
+          size: 26, // Slightly larger icon for tap area
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF68417E) : Colors.black38,
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
