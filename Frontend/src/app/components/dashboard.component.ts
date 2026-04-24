@@ -2,11 +2,12 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { MapPlaceholderComponent } from './map-placeholder.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MapPlaceholderComponent],
   template: `
     <div class="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
       <!-- Navbar -->
@@ -38,7 +39,7 @@ import { AuthService } from '../services/auth.service';
             </p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-300">
               <h3 class="font-bold text-green-900 mb-2">🔐 Auth</h3>
               <p class="text-green-800 text-sm">Email + Google OAuth configured</p>
@@ -50,6 +51,22 @@ import { AuthService } from '../services/auth.service';
             <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg border border-yellow-300">
               <h3 class="font-bold text-yellow-900 mb-2">🚀 Backend</h3>
               <p class="text-yellow-800 text-sm">Express API running</p>
+            </div>
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg border border-orange-300">
+              <h3 class="font-bold text-orange-900 mb-2">🗺️ Frontend Map</h3>
+              <p class="text-orange-800 text-sm mb-4">Open nearby issues map beside Backend status.</p>
+              <button
+                (click)="toggleMap()"
+                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                {{ showMap ? 'Hide Map' : 'Open Map' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="showMap" class="mb-8">
+            <div class="bg-white border border-orange-200 rounded-lg p-4">
+              <app-map-placeholder [showCloseButton]="false"></app-map-placeholder>
             </div>
           </div>
 
@@ -71,6 +88,7 @@ export class DashboardComponent {
   userEmail = '';
   userUid = '';
   authProvider = '';
+  showMap = false;
 
   constructor() {
     const user = this.authService.getCurrentUser();
@@ -83,6 +101,10 @@ export class DashboardComponent {
     }).catch(() => {
       this.authProvider = 'Email/Google';
     });
+  }
+
+  toggleMap() {
+    this.showMap = !this.showMap;
   }
 
   async logout() {

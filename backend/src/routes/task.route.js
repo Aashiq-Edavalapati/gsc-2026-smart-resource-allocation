@@ -14,7 +14,6 @@ router.use(verifyFirebaseToken);
 // ---------- TASK CREATION ----------
 router.post(
   '/issues/:issueId/tasks',
-  requireOrgRole(['OWNER', 'ADMIN']),
   taskController.createTask
 );
 
@@ -28,14 +27,12 @@ router.get(
 // ---------- APPLICANTS ----------
 router.get(
   '/tasks/:id/applicants',
-  requireOrgRole(['OWNER', 'ADMIN']),
   taskController.getApplicants
 );
 
 // ---------- MATCHING ----------
 router.get(
   '/tasks/:id/recommended-volunteers',
-  requireOrgRole(['OWNER', 'ADMIN']),
   taskController.getRecommendedVolunteers
 );
 
