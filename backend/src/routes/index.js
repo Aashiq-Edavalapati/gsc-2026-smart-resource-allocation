@@ -7,6 +7,7 @@ import trustRoutes from './trust.route.js';
 import adminRoutes from './admin.route.js';
 import aiRoutes from './ai.route.js';
 import noticationfRoutes from './notification.route.js';
+import uploadRoutes from './upload.route.js';
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use("/trust", trustRoutes);
 router.use("/admin", adminRoutes);
 router.use("/ai", aiRoutes);
 router.use("/notifications", noticationfRoutes);
+router.use("/upload", uploadRoutes);
 
 export default router;
