@@ -7,6 +7,12 @@ const router = Router();
 
 // ---------- PUBLIC ----------
 router.get('/', orgController.listOrgs);
+
+// STATIC ROUTES FIRST (avoid shadowing)
+router.get('/invites', orgController.getUserInvites);
+router.post('/invites/:inviteId/accept', orgController.acceptOrgInvite);
+
+// ---------- DYNAMIC PUBLIC ----------
 router.get('/:id', orgController.getOrg);
 
 // ---------- AUTH REQUIRED ----------
@@ -32,13 +38,11 @@ router.delete(
   orgController.removeMember
 );
 
-// leave org (self)
+// ---------- LEAVE ----------
 router.post('/:id/leave', orgController.leaveOrganization);
 
-// ---------- INVITES ----------
+// ---------- INVITES (ORG-SCOPED) ----------
 router.post('/:id/invite', requireOrgRole(['OWNER', 'ADMIN']), orgController.inviteMember);
-router.post('/invites/:inviteId/accept', orgController.acceptOrgInvite);
-router.get('/invites', orgController.getUserInvites);
 
 // ---------- VERIFICATION ----------
 router.post('/:id/verify', requireOrgRole(['OWNER']), orgController.verifyOrg);

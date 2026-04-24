@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middleware/auth.js';
 import * as notificationController from '../controllers/notification.controller.js';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(verifyFirebaseToken);
 
 router.post('/subscribe', notificationController.subscribe);
 router.delete('/token', notificationController.removeToken);

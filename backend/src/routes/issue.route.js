@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middleware/auth.js';
 import { requireOrgRole } from '../middleware/orgAuth.js';
 import * as issueController from '../controllers/issue.controller.js';
 
@@ -14,7 +14,7 @@ router.get('/:id/comments', issueController.getComments);
 router.get('/:id/collaborators', issueController.getCollaborators);
 
 // ---------- AUTH ----------
-router.use(authenticate);
+router.use(verifyFirebaseToken);
 
 // ---------- CREATE ----------
 router.post('/', issueController.createIssue);
