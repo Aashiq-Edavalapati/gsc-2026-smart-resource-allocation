@@ -47,6 +47,10 @@ export const synthesize = async (facts, imageUrls, rawData) => {
     await Promise.all(imageUrls.map(fetchImageAsBase64))
   ).filter(Boolean);
 
+  const correctionNote = rawData._hints
+    ? `\nCorrection required: ${rawData._hints}`
+    : '';
+
   const prompt = `
 Generate a professional Emergency Field Assessment Report strictly matching the JSON schema below.
 Do not hallucinate outside the provided facts.
@@ -54,7 +58,7 @@ Do not hallucinate outside the provided facts.
 Facts from field audio: "${facts}"
 Volunteer statement: "${rawData.statement || ''}"
 Volunteer observations: "${rawData.observations || ''}"
-Beneficiary category: "${rawData.category || ''}"
+Beneficiary category: "${rawData.category || ''}"${correctionNote}
 
 JSON Schema:
 ${SCHEMA}

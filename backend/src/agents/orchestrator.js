@@ -12,19 +12,24 @@ export const runPipeline = async (payload) => {
     url => /\.(jpeg|jpg|gif|png)$/i.test(url) || !/\.(mp4|webm|avi|mov|mp3|wav)$/i.test(url)
   );
 
-  const [transcript] = await Promise.all([transcribe(mediaUrls)]);
+  const transcript = await transcribe(mediaUrls);
   const facts = await extractFacts(transcript);
 
   let report = await synthesize(facts, imageUrls, payload);
+  const validated = await critique(report, facts);
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    report = await critique(report, facts, payload);
+  if (!validated._validation.passed) {
+    const hints = validated._validation.flags.join(', ');
+    report = await synthesize(facts, imageUrls, { ...payload, _hints: hints });
+  } else {
+    report = validated;
   }
 
   const pdfUrl = await publish(report);
 
   return { report, pdfUrl };
 };
+
 
 export const regenerateReport = async (payload) => {
   const { originalReport, feedback } = payload;
