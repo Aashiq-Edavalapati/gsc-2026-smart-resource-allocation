@@ -9,7 +9,7 @@ import {
   getTrustScoreHistory,
   deleteMyAccount
 } from "../controllers/user.controller.js";
-import { verifyFirebaseToken } from "../middleware/auth.js";
+import { verifyFirebaseToken } from "../middlewares/auth.js";
 
 const router = express.Router();
 

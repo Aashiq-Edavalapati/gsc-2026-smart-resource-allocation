@@ -194,7 +194,7 @@ export const firebaseAuth = admin.auth();
 
 ## 🔐 Step 4: Auth Middleware
 
-Create `src/middleware/auth.js`:
+Create `src/middlewares/auth.js`:
 
 **This is the ONLY backend auth logic needed.** It verifies Firebase tokens — that's it.
 
@@ -253,7 +253,7 @@ Create `src/routes/users.js`:
 import express from 'express';
 import prisma from '../config/db.js';
 import { firebaseAuth } from '../config/firebase-admin.js';
-import { verifyFirebaseToken } from '../middleware/auth.js';
+import { verifyFirebaseToken } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -925,7 +925,7 @@ If you win and want to deploy:
 - [ ] `.env` file configured with `DATABASE_URL` and `FIREBASE_PROJECT_ID`
 - [ ] `firebase-admin` installed: `npm install firebase-admin`
 - [ ] `src/config/firebase-admin.js` created
-- [ ] `src/middleware/auth.js` created (token verification only)
+- [ ] `src/middlewares/auth.js` created (token verification only)
 - [ ] `src/routes/users.js` created (with `/sync` endpoint)
 - [ ] `src/index.js` registers user routes
 - [ ] Backend running: `npm run dev`

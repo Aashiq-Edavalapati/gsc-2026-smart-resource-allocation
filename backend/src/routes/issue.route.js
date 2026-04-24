@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { verifyFirebaseToken } from '../middleware/auth.js';
-import { requireOrgRole } from '../middleware/orgAuth.js';
+import { verifyFirebaseToken } from '../middlewares/auth.js';
+import { requireOrgRole } from '../middlewares/orgAuth.js';
 import * as issueController from '../controllers/issue.controller.js';
 
 const router = Router();
