@@ -56,13 +56,39 @@ export const acceptOrgInvite = async (req, res) => {
   }
 };
 
-export const verifyOrg = async (req, res) => {
+export const initiateVerification = async (req, res) => {
   try {
-    const { documents } = req.body;
-    const org = await orgService.submitForVerification(req.params.id, documents);
-    res.status(200).json({ success: true, message: 'Verification pending OCR processing', data: org });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    const { darpanId } = req.body;
+
+    const org = await orgService.initiateVerification(
+      req.params.id,
+      darpanId
+    );
+
+    res.json({ success: true, data: org });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+};
+
+export const sendOtp = async (req, res) => {
+  try {
+    const org = await orgService.sendOtp(req.params.id);
+    res.json({ success: true, message: "OTP sent" });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+
+    const org = await orgService.verifyOtp(req.params.id, otp);
+
+    res.json({ success: true, data: org });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
   }
 };
 

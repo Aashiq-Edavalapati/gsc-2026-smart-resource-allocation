@@ -82,6 +82,7 @@ enum OrgType {
 enum VerifyStatus {
   UNVERIFIED
   PENDING
+  CONTACT_ADDED
   VERIFIED
 }
 
@@ -106,6 +107,12 @@ model Organization {
   lat         Float?
   lng         Float?
 
+  // NGO verification fields
+  darpanId            String?
+  verifiedEmail       String?
+  verificationOtp     String?
+  otpExpiresAt        DateTime?
+  otpAttempts Int @default(0)
   verificationStatus VerifyStatus @default(UNVERIFIED)
   trustScore  Int @default(0)
 

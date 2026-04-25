@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import prisma from "../config/db.js";
 
 export const getPendingOrgs = async () => {
@@ -12,15 +13,13 @@ export const getPendingOrgs = async () => {
   });
 };
 
-export const verifyOrganization = async (orgId) => {
-  const org = await prisma.organization.findUnique({ where: { id: orgId } });
-  if (!org) throw new Error("Organization not found");
-
+export const addContact = async (orgId, email) => {
   return prisma.organization.update({
     where: { id: orgId },
     data: {
-      verificationStatus: 'VERIFIED',
-      trustScore: { increment: 50 }
+      verifiedEmail: email,
+      verificationOtp: null,
+      otpExpiresAt: null
     }
   });
 };

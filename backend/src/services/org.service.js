@@ -1,3 +1,5 @@
+import crypto from "crypto";
+import { sendOtpMail } from "../utils/sendMail.js";
 import prisma from "../config/db.js";
 
 export const createOrganization = async (userId, data) => {
@@ -11,6 +13,7 @@ export const createOrganization = async (userId, data) => {
         city: data.city,
         lat: data.lat,
         lng: data.lng,
+        verificationStatus: 'UNVERIFIED', 
       }
     });
 
@@ -106,15 +109,99 @@ export const acceptInvite = async (userId, userEmail, inviteId) => {
   });
 };
 
-// Stub for the AI workflow we will build later
-export const submitForVerification = async (orgId, documents) => {
-  // TODO: Integrate Google Cloud Vision API here for OCR in next phases
-  // For now, just update the status to PENDING
+export const initiateVerification = async (orgId, darpanId) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId }
+  });
+
+  if (!org) throw new Error("Org not found");
+
+  if (org.type !== 'NGO') {
+    throw new Error("Only NGOs can request verification");
+  }
+
+  if (org.verificationStatus === 'VERIFIED') {
+    throw new Error("Already verified");
+  }
+
   return prisma.organization.update({
     where: { id: orgId },
-    data: { 
-      documents, 
-      verificationStatus: 'PENDING' 
+    data: {
+      darpanId,
+      verificationStatus: 'PENDING'
+    }
+  });
+};
+
+export const sendOtp = async (orgId) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId }
+  });
+
+  if (!org) throw new Error("Org not found");
+
+  // 🔒 validations
+  if (org.type !== 'NGO') {
+    throw new Error("Only NGOs can be verified");
+  }
+
+  if (org.verificationStatus !== 'PENDING') {
+    throw new Error("Verification not initiated");
+  }
+
+  if (!org.verifiedEmail) {
+    throw new Error("Admin has not added contact details yet");
+  }
+
+  if (org.otpExpiresAt && new Date() < org.otpExpiresAt) {
+    throw new Error("OTP already sent. Please wait.");
+  }
+
+  const otp = crypto.randomInt(100000, 999999).toString();
+
+  await sendOtpMail(org.verifiedEmail, otp);
+
+  return prisma.organization.update({
+    where: { id: orgId },
+    data: {
+      verificationOtp: otp,
+      otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    }
+  });
+};
+
+export const verifyOtp = async (orgId, otp) => {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId }
+  });
+
+  if (!org) throw new Error("Org not found");
+
+  if (org.otpAttempts >= 5) {
+    throw new Error("Too many attempts");
+  }
+
+  if (org.verificationOtp !== otp) {
+    await prisma.organization.update({
+      where: { id: orgId },
+      data: { otpAttempts: { increment: 1 } }
+    });
+
+    throw new Error("Invalid OTP");
+  }
+
+  if (new Date() > org.otpExpiresAt) {
+    throw new Error("OTP expired");
+  }
+
+  return prisma.organization.update({
+    where: { id: orgId },
+    data: {
+      verificationStatus: 'VERIFIED',
+      verificationOtp: null,
+      otpExpiresAt: null,
+      otpAttempts: 0,
+      trustScore: { increment: 50 }
     }
   });
 };
