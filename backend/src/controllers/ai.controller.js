@@ -1,4 +1,5 @@
 import * as aiService from '../services/ai.service.js';
+import * as agenticPipeline from '../agents/orchestrator.js';
 
 export const ocr = async (req, res) => {
   const result = await aiService.ocr(req.body.fileUrl);
@@ -38,4 +39,24 @@ export const analyzeSurvey = async (req, res) => {
 export const classifyIssue = async (req, res) => {
   const result = await aiService.classifyIssue(req.body.text);
   res.json({ success: true, data: result });
+};
+
+export const generateReport = async (req, res) => {
+  try {
+    const result = await agenticPipeline.runPipeline(req.body);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('generateReport error:', err);
+    res.status(500).json({ success: false, error: 'Failed to generate report' });
+  }
+};
+
+export const regenerateReport = async (req, res) => {
+  try {
+    const result = await agenticPipeline.regenerateReport(req.body);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('regenerateReport error:', err);
+    res.status(500).json({ success: false, error: 'Failed to regenerate report' });
+  }
 };

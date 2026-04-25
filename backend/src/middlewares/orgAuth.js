@@ -4,7 +4,8 @@ export const requireOrgRole = (allowedRoles) => {
   return async (req, res, next) => {
     try {
       const userId = req.user.id;
-      const orgId = req.params.id;
+      const orgId = req.params.id || req.body.orgId;
+
       if (!orgId) return res.status(400).json({ error: 'Organization ID required' });
 
       const membership = await prisma.organizationMember.findUnique({

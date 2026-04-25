@@ -30,39 +30,41 @@ export const sendToDevice = async (userId, title, body, data = {}) => {
 };
 
 // ---------- GEO NOTIFY ----------
-export const notifyNearestNGO = async (lat, lng, issueId) => {
+export const notifyNearestNGO = async (lat, lng, issue) => {
   const nearestOrgs = await prisma.$queryRaw`
     SELECT id
     FROM "Organization"
     WHERE "verificationStatus" = 'VERIFIED'
+    AND lat IS NOT NULL AND lng IS NOT NULL
     AND ST_DWithin(
       ST_SetSRID(ST_MakePoint("lng", "lat"), 4326)::geography,
       ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
       10000
     )
-    LIMIT 1;
+    LIMIT 5
   `;
 
   if (!nearestOrgs.length) return;
 
-  const orgId = nearestOrgs[0].id;
+  for (const org of nearestOrgs) {
+    const admins = await prisma.organizationMember.findMany({
+      where: {
+        organizationId: org.id,
+        baseRole: { in: ['OWNER', 'ADMIN'] }
+      }
+    });
 
-  const admins = await prisma.organizationMember.findMany({
-    where: {
-      organizationId: orgId,
-      baseRole: { in: ['OWNER', 'ADMIN'] }
+    for (const member of admins) {
+      await sendToDevice(
+        member.userId,
+        'New Issue Reported Nearby',
+        issue.title,
+        { type: 'ISSUE_NEARBY', issueId: issue.id }
+      );
     }
-  });
-
-  for (const adminUser of admins) {
-    await sendToDevice(
-      adminUser.userId,
-      "New Nearby Issue",
-      "A citizen reported an issue near your jurisdiction.",
-      { type: 'ISSUE_NEARBY', issueId }
-    );
   }
 };
+
 
 // ---------- TOKEN MANAGEMENT ----------
 export const saveToken = (userId, token) => {

@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { sendToDevice } from './notification.service.js';
+import { getIssueCoords, haversineKm } from '../lib/geo.js';
 
 // ---------- CREATE ----------
 export const createTask = async (issueId, membershipId, data) => {
@@ -14,7 +15,10 @@ export const createTask = async (issueId, membershipId, data) => {
     }
   });
 
-  // TODO: Notify nearby volunteers (smart matching)
+  matchAndNotifyVolunteers(task).catch(err =>
+    console.error('Volunteer matching failed:', err.message)
+  );
+
   return task;
 };
 
@@ -55,11 +59,11 @@ export const getRecommendedVolunteers = async (taskId) => {
 
   if (!task) throw new Error('Task not found');
 
+  const issueCoords = await getIssueCoords(task.issueId);
+
   const volunteers = await prisma.volunteerProfile.findMany({
     include: { user: true }
   });
-
-  // TODO: Replace with PostGIS-based distance calculation + availability filtering
 
   return volunteers
     .map(v => {
@@ -67,16 +71,21 @@ export const getRecommendedVolunteers = async (taskId) => {
         v.skills.includes(s)
       ).length;
 
-      const distanceScore = calculateDistanceScore(task.issue, v.user);
-      const trustScore = v.trustScore;
+      let distanceScore = 0;
+      if (issueCoords && v.user.lat && v.user.lng) {
+        const km = haversineKm(
+          Number(issueCoords.lat),
+          Number(issueCoords.lng),
+          v.user.lat,
+          v.user.lng
+        );
+        distanceScore = Math.max(0, 10 - km / 2);
+      }
 
-      const score =
-        skillMatch * 5 +
-        distanceScore * 3 +
-        trustScore * 0.2;
-
+      const score = skillMatch * 5 + distanceScore * 3 + v.trustScore * 0.2;
       return { volunteer: v, score };
     })
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
 };
@@ -108,7 +117,28 @@ export const applyToTask = async (userId, taskId) => {
     }
   });
 
-  // TODO: Notify org admins about new applicant
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: { issue: { select: { ownerOrgId: true } } }
+  });
+
+  if (task?.issue?.ownerOrgId) {
+    const admins = await prisma.organizationMember.findMany({
+      where: {
+        organizationId: task.issue.ownerOrgId,
+        baseRole: { in: ['OWNER', 'ADMIN'] }
+      }
+    });
+
+    for (const admin of admins) {
+      await sendToDevice(
+        admin.userId,
+        'New Task Applicant',
+        `A volunteer has applied to one of your tasks.`,
+        { type: 'TASK_APPLICANT', taskId }
+      );
+    }
+  }
 
   return assignment;
 };
@@ -131,16 +161,51 @@ export const getAssignment = async (userId, assignmentId) => {
 export const updateAssignment = async (userId, assignmentId, data) => {
   const assignment = await prisma.assignment.findUnique({
     where: { id: assignmentId },
-    include: { volunteer: true }
+    include: {
+      volunteer: true,
+      task: { include: { issue: { select: { ownerOrgId: true } } } }
+    }
   });
 
   if (!assignment) throw new Error('Not found');
+
+  const ownerOrgId = assignment.task?.issue?.ownerOrgId;
+  if (ownerOrgId) {
+    const membership = await prisma.organizationMember.findFirst({
+      where: {
+        userId,
+        organizationId: ownerOrgId,
+        baseRole: { in: ['OWNER', 'ADMIN'] },
+        status: 'ACTIVE'
+      }
+    });
+
+    if (!membership) throw new Error('Unauthorized');
+  }
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.assignment.update({
       where: { id: assignmentId },
       data
     });
+
+    if (data.status === 'APPROVED') {
+      await sendToDevice(
+        assignment.volunteer.userId,
+        'Assignment Approved',
+        `You have been approved for task: ${assignment.task?.title || ''}`,
+        { type: 'ASSIGNMENT_APPROVED', assignmentId }
+      );
+    }
+
+    if (data.status === 'REJECTED') {
+      await sendToDevice(
+        assignment.volunteer.userId,
+        'Assignment Update',
+        `Your application for a task was not selected.`,
+        { type: 'ASSIGNMENT_REJECTED', assignmentId }
+      );
+    }
 
     if (data.status === 'COMPLETED') {
       await tx.volunteerProfile.update({
@@ -155,9 +220,14 @@ export const updateAssignment = async (userId, assignmentId, data) => {
           reason: 'TASK_COMPLETED'
         }
       });
-    }
 
-    // TODO: Notify volunteer on approval/rejection/completion
+      await sendToDevice(
+        assignment.volunteer.userId,
+        'Task Completed',
+        'Your contribution has been recorded. Trust score updated.',
+        { type: 'ASSIGNMENT_APPROVED', assignmentId }
+      );
+    }
 
     return updated;
   });
@@ -178,10 +248,16 @@ export const getMyAssignments = async (userId) => {
 };
 
 // ---------- UTILS ----------
-const calculateDistanceScore = (issue, user) => {
-  // TODO: Replace with PostGIS distance calculation
-  if (!issue || !user.lat || !user.lng) return 0;
+const matchAndNotifyVolunteers = async (task) => {
+  const matched = await getRecommendedVolunteers(task.id);
+  const top = matched.slice(0, 10);
 
-  // fallback mock logic
-  return 5;
-};
+  for (const { volunteer } of top) {
+    await sendToDevice(
+      volunteer.userId,
+      'New Task Matching Your Skills',
+      task.title,
+      { type: 'TASK_CREATED', taskId: task.id }
+    );
+  }
+};

@@ -40,8 +40,8 @@ export const createIssue = async (userId, data) => {
     return newIssue;
   });
 
-  // Set location using PostGIS helper after creation
   await setIssueLocation(issue.id, parseFloat(data.lat), parseFloat(data.lng));
+  await notifyNearestNGO(parseFloat(data.lat), parseFloat(data.lng), issue);
 
   return issue;
 };
