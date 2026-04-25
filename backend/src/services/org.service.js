@@ -124,11 +124,18 @@ export const initiateVerification = async (orgId, darpanId) => {
     throw new Error("Already verified");
   }
 
+  if (['PENDING', 'CONTACT_ADDED'].includes(org.verificationStatus)) {
+    throw new Error("Verification already initiated");
+  }
+
   return prisma.organization.update({
     where: { id: orgId },
     data: {
       darpanId,
-      verificationStatus: 'PENDING'
+      verificationStatus: 'PENDING',
+      verificationOtp: null,
+      otpExpiresAt: null,
+      otpAttempts: 0
     }
   });
 };
@@ -145,7 +152,11 @@ export const sendOtp = async (orgId) => {
     throw new Error("Only NGOs can be verified");
   }
 
-  if (org.verificationStatus !== 'PENDING') {
+  if (org.verificationStatus === 'PENDING') {
+    throw new Error("Admin has not added contact details yet");
+  }
+
+  if (org.verificationStatus !== 'CONTACT_ADDED') {
     throw new Error("Verification not initiated");
   }
 
@@ -177,8 +188,20 @@ export const verifyOtp = async (orgId, otp) => {
 
   if (!org) throw new Error("Org not found");
 
+  if (org.verificationStatus !== 'CONTACT_ADDED') {
+    throw new Error('OTP verification not available at this stage');
+  }
+
+  if (!org.verificationOtp || !org.otpExpiresAt) {
+    throw new Error('OTP not sent yet');
+  }
+
   if (org.otpAttempts >= 5) {
     throw new Error("Too many attempts");
+  }
+
+  if (new Date() > org.otpExpiresAt) {
+    throw new Error("OTP expired");
   }
 
   if (org.verificationOtp !== otp) {
@@ -188,10 +211,6 @@ export const verifyOtp = async (orgId, otp) => {
     });
 
     throw new Error("Invalid OTP");
-  }
-
-  if (new Date() > org.otpExpiresAt) {
-    throw new Error("OTP expired");
   }
 
   return prisma.organization.update({
