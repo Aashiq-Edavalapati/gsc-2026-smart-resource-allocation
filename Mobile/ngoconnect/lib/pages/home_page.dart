@@ -1,4 +1,13 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:video_player/video_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../components/main/titlebar.dart';
 import '../components/main/history_card.dart';
 
@@ -12,6 +21,122 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // This state variable controls whether the recording layer is open or not
   bool _isRecordingMode = false;
+  
+  final ImagePicker _picker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isRecordingAudio = false;
+  
+  // Stores media: { 'type': 'photo'|'video'|'audio', 'path': String, 'thumbnail': Uint8List? }
+  List<Map<String, dynamic>> _mediaFiles = [];
+
+  final ScrollController _thumbnailScrollController = ScrollController();
+  Timer? _recordingTimer;
+  int _recordingSeconds = 0;
+  List<double> _amplitudes = [];
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+
+  void _scrollToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_thumbnailScrollController.hasClients) {
+        _thumbnailScrollController.animateTo(
+          _thumbnailScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    _thumbnailScrollController.dispose();
+    _audioRecorder.dispose();
+    super.dispose();
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      // image_picker handles camera permissions automatically on most platforms
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+      if (photo != null) {
+        setState(() {
+          _mediaFiles.add({'type': 'photo', 'path': photo.path});
+        });
+        _scrollToEnd();
+      }
+    } catch (e) {
+      debugPrint('Error taking photo: $e');
+    }
+  }
+
+  Future<void> _recordVideo() async {
+    try {
+      // Audio permission might still be needed depending on the platform/plugin,
+      // but image_picker usually handles both for video mode.
+      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+      if (video != null) {
+        final uint8list = await VideoThumbnail.thumbnailData(
+          video: video.path,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 120, // specify the width of the thumbnail
+          quality: 25,
+        );
+        setState(() {
+          _mediaFiles.add({'type': 'video', 'path': video.path, 'thumbnail': uint8list});
+        });
+        _scrollToEnd();
+      }
+    } catch (e) {
+      debugPrint('Error recording video: $e');
+    }
+  }
+
+  Future<void> _toggleAudioRecording() async {
+    try {
+      if (_isRecordingAudio) {
+        _recordingTimer?.cancel();
+        _amplitudeSubscription?.cancel();
+        final path = await _audioRecorder.stop();
+        if (path != null) {
+          setState(() {
+            _isRecordingAudio = false;
+            _mediaFiles.add({'type': 'audio', 'path': path});
+          });
+          _scrollToEnd();
+        }
+      } else {
+        if (await _audioRecorder.hasPermission()) {
+          final directory = await getApplicationDocumentsDirectory();
+          final path = '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          await _audioRecorder.start(const RecordConfig(), path: path);
+          
+          _recordingSeconds = 0;
+          _amplitudes = [];
+          
+          _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            setState(() { _recordingSeconds++; });
+          });
+          
+          _amplitudeSubscription = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((amp) {
+            setState(() {
+              _amplitudes.add(amp.current);
+              if (_amplitudes.length > 30) _amplitudes.removeAt(0);
+            });
+          });
+
+          setState(() {
+            _isRecordingAudio = true;
+          });
+        } else {
+          debugPrint('Microphone permission not granted');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error recording audio: $e');
+    }
+  }
 
   void _toggleRecordingMode() {
     setState(() {
@@ -137,17 +262,27 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: Colors.black.withOpacity(0.05)),
                       ),
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        children: [
-                          _buildThumbnailBox(),
-                          _buildThumbnailBox(),
-                          _buildThumbnailBox(),
-                          _buildThumbnailBox(),
-                          _buildThumbnailBox(),
-                        ],
-                      ),
+                      child: _mediaFiles.isEmpty
+                          ? const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.image_outlined, color: Colors.black26, size: 40),
+                                  SizedBox(height: 8),
+                                  Text("No Media Yet", style: TextStyle(color: Colors.black26)),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: _thumbnailScrollController,
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              itemCount: _mediaFiles.length,
+                              itemBuilder: (context, index) {
+                                final media = _mediaFiles[index];
+                                return _buildMediaThumbnail(index, media, key: ValueKey(media['path']));
+                              },
+                            ),
                     ),
                       
                     // 2. Transcription Area with Gradient Fade
@@ -268,19 +403,132 @@ class _HomePageState extends State<HomePage> {
     ); // Closes Scaffold
   }
 
-  Widget _buildThumbnailBox() {
+  void _confirmDelete(Map<String, dynamic> media) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete Media"),
+          content: const Text("Are you sure you want to delete this file?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                debugPrint('Attempting to delete media: ${media['path']}');
+                try {
+                  setState(() {
+                    final initialCount = _mediaFiles.length;
+                    // Remove all occurrences by path just in case
+                    _mediaFiles.removeWhere((item) => item['path'] == media['path']);
+                    // Create a new list to ensure rebuilds
+                    _mediaFiles = List.from(_mediaFiles);
+                    debugPrint('Deleted. Initial count: $initialCount, New count: ${_mediaFiles.length}');
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Media removed.'), duration: Duration(seconds: 1)),
+                  );
+                } catch (e) {
+                  debugPrint('Error deleting: $e');
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _previewMedia(Map<String, dynamic> media) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: MediaPreviewPlayer(media: media),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.cancel, color: Colors.white, size: 36),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMediaThumbnail(int index, Map<String, dynamic> media, {Key? key}) {
+    Widget content;
+    if (media['type'] == 'photo') {
+      content = Image.file(File(media['path']), fit: BoxFit.cover);
+    } else if (media['type'] == 'video') {
+      content = Stack(
+        fit: StackFit.expand,
+        children: [
+          if (media['thumbnail'] != null)
+             Image.memory(media['thumbnail'], fit: BoxFit.cover),
+          Container(color: Colors.black26), // Dark overlay
+          const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 32)),
+        ],
+      );
+    } else if (media['type'] == 'audio') {
+      content = const Center(child: Icon(Icons.audiotrack, color: Colors.black54, size: 32));
+    } else {
+      content = const Center(child: Icon(Icons.file_present));
+    }
+
     return Padding(
+      key: key,
       padding: const EdgeInsets.only(right: 12),
       child: AspectRatio(
         aspectRatio: 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Center(
-            child: Icon(Icons.image_outlined, color: Colors.black26, size: 32),
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: () => _previewMedia(media),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: content,
+              ),
+            ),
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
+                  onPressed: () => _confirmDelete(media),
+                  tooltip: 'Delete Media',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -325,6 +573,44 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         
+        if (_isRecordingAudio)
+          Container(
+            height: 40,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            margin: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              children: [
+                Text(
+                  '${(_recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_recordingSeconds % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(width: 16), // Space between time and lines
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: _amplitudes.map((amp) {
+                      double height = ((amp + 50) / 50 * 35);
+                      if (height < 5) height = 5;
+                      if (height > 35) height = 35;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 100),
+                        margin: const EdgeInsets.only(left: 3),
+                        width: 4,
+                        height: height,
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -334,21 +620,22 @@ class _HomePageState extends State<HomePage> {
                 child: _buildActionButton(
                   icon: Icons.videocam_outlined,
                   label: "Video",
-                  onTap: () {},
+                  onTap: _recordVideo,
                 ),
               ),
               Expanded(
                 child: _buildActionButton(
-                  icon: Icons.mic_none_rounded,
-                  label: "Voice",
-                  onTap: () {},
+                  icon: _isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
+                  label: _isRecordingAudio ? "Stop" : "Voice",
+                  iconColor: _isRecordingAudio ? Colors.red : Colors.white,
+                  onTap: _toggleAudioRecording,
                 ),
               ),
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.camera_alt_outlined,
                   label: "Photo",
-                  onTap: () {},
+                  onTap: _takePhoto,
                 ),
               ),
             ],
@@ -415,8 +702,10 @@ class _HomePageState extends State<HomePage> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -428,7 +717,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            child: Icon(icon, color: Colors.white, size: 28),
+            child: Icon(icon, color: iconColor ?? Colors.white, size: 28),
           ),
           const SizedBox(height: 8),
           Text(
@@ -491,5 +780,115 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+}
+
+class MediaPreviewPlayer extends StatefulWidget {
+  final Map<String, dynamic> media;
+  const MediaPreviewPlayer({super.key, required this.media});
+  
+  @override
+  State<MediaPreviewPlayer> createState() => _MediaPreviewPlayerState();
+}
+
+class _MediaPreviewPlayerState extends State<MediaPreviewPlayer> {
+  VideoPlayerController? _videoController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.media['type'] == 'video') {
+       _videoController = VideoPlayerController.file(File(widget.media['path']))
+         ..initialize().then((_) {
+           setState(() {});
+           _videoController!.play();
+           _isPlaying = true;
+         });
+       _videoController!.addListener(() {
+         if (!mounted) return;
+         setState(() {
+           _isPlaying = _videoController!.value.isPlaying;
+         });
+       });
+    } else if (widget.media['type'] == 'audio') {
+       _audioPlayer.play(DeviceFileSource(widget.media['path']));
+       _isPlaying = true;
+       
+       _audioPlayer.onPlayerStateChanged.listen((state) {
+         if (!mounted) return;
+         setState(() { _isPlaying = state == PlayerState.playing; });
+       });
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.media['type'] == 'photo') {
+      return InteractiveViewer(child: Image.file(File(widget.media['path'])));
+    } else if (widget.media['type'] == 'video') {
+      return _videoController != null && _videoController!.value.isInitialized
+          ? AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      if (_videoController!.value.isPlaying) {
+                        _videoController!.pause();
+                      } else {
+                        _videoController!.play();
+                      }
+                    },
+                    child: VideoPlayer(_videoController!),
+                  ),
+                  if (!_isPlaying)
+                    const Center(
+                      child: Icon(Icons.play_circle_fill, color: Colors.white54, size: 64),
+                    ),
+                  VideoProgressIndicator(_videoController!, allowScrubbing: true),
+                ]
+              ),
+            )
+          : const SizedBox(
+              height: 200, 
+              child: Center(child: CircularProgressIndicator(color: Colors.white))
+            );
+    } else if (widget.media['type'] == 'audio') {
+      return Container(
+        width: double.infinity,
+        height: 200,
+        color: Colors.black87,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.audiotrack, size: 64, color: Colors.white),
+            const SizedBox(height: 20),
+            IconButton(
+              icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled),
+              color: Colors.white,
+              iconSize: 48,
+              onPressed: () {
+                if (_isPlaying) {
+                  _audioPlayer.pause();
+                } else {
+                  _audioPlayer.resume();
+                }
+              },
+            )
+          ],
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
