@@ -25,11 +25,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // This state variable controls whether the recording layer is open or not
   bool _isRecordingMode = false;
-  
+
   final ImagePicker _picker = ImagePicker();
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecordingAudio = false;
-  
+
   // Stores media: { 'type': 'photo'|'video'|'audio', 'path': String, 'thumbnail': Uint8List? }
   List<Map<String, dynamic>> _mediaFiles = [];
 
@@ -88,7 +88,11 @@ class _HomePageState extends State<HomePage> {
           quality: 25,
         );
         setState(() {
-          _mediaFiles.add({'type': 'video', 'path': video.path, 'thumbnail': uint8list});
+          _mediaFiles.add({
+            'type': 'video',
+            'path': video.path,
+            'thumbnail': uint8list,
+          });
         });
         _scrollToEnd();
       }
@@ -113,22 +117,27 @@ class _HomePageState extends State<HomePage> {
       } else {
         if (await _audioRecorder.hasPermission()) {
           final directory = await getApplicationDocumentsDirectory();
-          final path = '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          final path =
+              '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
           await _audioRecorder.start(const RecordConfig(), path: path);
-          
+
           _recordingSeconds = 0;
           _amplitudes = [];
-          
+
           _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            setState(() { _recordingSeconds++; });
-          });
-          
-          _amplitudeSubscription = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((amp) {
             setState(() {
-              _amplitudes.add(amp.current);
-              if (_amplitudes.length > 30) _amplitudes.removeAt(0);
+              _recordingSeconds++;
             });
           });
+
+          _amplitudeSubscription = _audioRecorder
+              .onAmplitudeChanged(const Duration(milliseconds: 100))
+              .listen((amp) {
+                setState(() {
+                  _amplitudes.add(amp.current);
+                  if (_amplitudes.length > 30) _amplitudes.removeAt(0);
+                });
+              });
 
           setState(() {
             _isRecordingAudio = true;
@@ -151,11 +160,11 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+
     // Top layer takes 60%, Bottom layer takes 40%
     final topLayerHeight = size.height * 0.6;
     final bottomLayerHeight = size.height * 0.4;
-    
+
     // Variables for the normal state "New Recording" button
     const double padding = 20.0;
     const double buttonHeight = 60.0;
@@ -177,254 +186,284 @@ class _HomePageState extends State<HomePage> {
             // ---------------------------------------------------
             // 1. BASE LAYER: Content
             // ---------------------------------------------------
-          // ---------------------------------------------------
-          // 2. BASE LAYER: Content (Background)
-          // ---------------------------------------------------
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: padding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 10),
-                Text(
-                  "Latest Recordings",
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: size.height * 0.7,
+            // ---------------------------------------------------
+            // 2. BASE LAYER: Content (Background)
+            // ---------------------------------------------------
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    Text(
+                      "Latest Recordings",
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                     ),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAFAFA),
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                      child: ListView(
-                        shrinkWrap: true,
-                        // Removed bottom padding from here so Container shrinks correctly
-                        padding: const EdgeInsets.only(top: 8, bottom: 8),
-                        children: [
-                          HistoryCard(
-                            title: "Community Outreach",
-                            duration: "04:20",
-                            photoCount: 3,
-                            videoCount: 1,
-                            onViewTap: () {},
+                    const SizedBox(height: 10),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: size.height * 0.7,
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFAFAFA),
+                            borderRadius: BorderRadius.circular(32),
                           ),
-                          HistoryCard(
-                            title: "Resource Allocation",
-                            duration: "10:15",
-                            photoCount: 5,
-                            onViewTap: () {},
+                          child: ListView(
+                            shrinkWrap: true,
+                            // Removed bottom padding from here so Container shrinks correctly
+                            padding: const EdgeInsets.only(top: 8, bottom: 8),
+                            children: [
+                              HistoryCard(
+                                title: "Community Outreach",
+                                duration: "04:20",
+                                photoCount: 3,
+                                videoCount: 1,
+                                onViewTap: () {},
+                              ),
+                              HistoryCard(
+                                title: "Resource Allocation",
+                                duration: "10:15",
+                                photoCount: 5,
+                                onViewTap: () {},
+                              ),
+                              HistoryCard(
+                                title: "Donation Drive",
+                                duration: "02:45",
+                                videoCount: 2,
+                                onViewTap: () {},
+                              ),
+                            ],
                           ),
-                          HistoryCard(
-                            title: "Donation Drive",
-                            duration: "02:45",
-                            videoCount: 2,
-                            onViewTap: () {},
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 180), // Space for nav bar + recording button
-                ],
-              ),
-            ),
-          ),
-
-          // ---------------------------------------------------
-          // 2. BOTTOM LAYER (Transforms from Button)
-          // ---------------------------------------------------
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            // If closed: Anchor above bottom nav bar. If open: Snap to absolute bottom
-            bottom: _isRecordingMode ? 0 : padding + 85,
-            left: _isRecordingMode ? 0 : padding,
-            right: _isRecordingMode ? 0 : padding,
-            height: _isRecordingMode ? null : buttonHeight, // null height allows it to fit content
-            child: GestureDetector(
-              onTap: _isRecordingMode ? null : _toggleRecordingMode,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF68417E),
-                  borderRadius: _isRecordingMode 
-                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
-                      : BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    )
+                    const SizedBox(
+                      height: 180,
+                    ), // Space for nav bar + recording button
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: _isRecordingMode 
-                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
-                      : BorderRadius.circular(24),
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: _isRecordingMode
-                        ? RecordingActionSheet(
-                            isRecordingAudio: _isRecordingAudio,
-                            recordingSeconds: _recordingSeconds,
-                            amplitudes: _amplitudes,
-                            onRecordVideo: _recordVideo,
-                            onToggleAudioRecording: _toggleAudioRecording,
-                            onTakePhoto: _takePhoto,
-                            onSubmit: () {
-                              // TODO: Submit review logic
-                            },
-                            onCancel: _toggleRecordingMode,
-                          )
-                        : _buildClosedButtonUI(context),
+              ),
+            ),
+
+            // ---------------------------------------------------
+            // 2. BOTTOM LAYER (Transforms from Button)
+            // ---------------------------------------------------
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+              // If closed: Anchor above bottom nav bar. If open: Snap to absolute bottom
+              bottom: _isRecordingMode ? 0 : padding + 85,
+              left: _isRecordingMode ? 0 : padding,
+              right: _isRecordingMode ? 0 : padding,
+              height: _isRecordingMode
+                  ? null
+                  : buttonHeight, // null height allows it to fit content
+              child: GestureDetector(
+                onTap: _isRecordingMode ? null : _toggleRecordingMode,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF68417E),
+                    borderRadius: _isRecordingMode
+                        ? const BorderRadius.vertical(top: Radius.circular(32))
+                        : BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _isRecordingMode
+                        ? const BorderRadius.vertical(top: Radius.circular(32))
+                        : BorderRadius.circular(24),
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: _isRecordingMode
+                          ? RecordingActionSheet(
+                              isRecordingAudio: _isRecordingAudio,
+                              recordingSeconds: _recordingSeconds,
+                              amplitudes: _amplitudes,
+                              onRecordVideo: _recordVideo,
+                              onToggleAudioRecording: _toggleAudioRecording,
+                              onTakePhoto: _takePhoto,
+                              onSubmit: () {
+                                // TODO: Submit review logic
+                              },
+                              onCancel: _toggleRecordingMode,
+                            )
+                          : _buildClosedButtonUI(context),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // ---------------------------------------------------
-          // 3. FLOATING NAV BAR
-          // ---------------------------------------------------
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            bottom: _isRecordingMode ? -100 : padding, // Slide down completely offscreen when recording
-            left: padding,
-            right: padding,
-            height: 70, // Required for proper AnimatedPositioned bounds!
-            child: const FloatingNavBar(),
-          ),
+            // ---------------------------------------------------
+            // 3. FLOATING NAV BAR
+            // ---------------------------------------------------
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+              bottom: _isRecordingMode
+                  ? -100
+                  : padding, // Slide down completely offscreen when recording
+              left: padding,
+              right: padding,
+              height: 70, // Required for proper AnimatedPositioned bounds!
+              child: const FloatingNavBar(),
+            ),
 
-          // ---------------------------------------------------
-          // 4. TOP LAYER (Foreground - Highest Z-Index)
-          // ---------------------------------------------------
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            // When open it drops to top = 0. When closed it slides up completely out of view
-            top: _isRecordingMode ? 0 : -topLayerHeight,
-            left: 0,
-            right: 0,
-            height: topLayerHeight,
-            child: IgnorePointer(
-              ignoring: !_isRecordingMode,
+            // ---------------------------------------------------
+            // 4. TOP LAYER (Foreground - Highest Z-Index)
+            // ---------------------------------------------------
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+              // When open it drops to top = 0. When closed it slides up completely out of view
+              top: _isRecordingMode ? 0 : -topLayerHeight,
+              left: 0,
+              right: 0,
+              height: topLayerHeight,
+              child: IgnorePointer(
+                ignoring: !_isRecordingMode,
                 child: Container(
                   color: Colors.white,
                   child: Column(
                     children: [
-                    // 1. Thumbnail Area (Top) with top margin for safe area
-                    Container(
-                      height: size.height * 0.25,
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.black.withOpacity(0.05)),
-                      ),
-                      child: _mediaFiles.isEmpty
-                          ? const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.image_outlined, color: Colors.black26, size: 40),
-                                  SizedBox(height: 8),
-                                  Text("No Media Yet", style: TextStyle(color: Colors.black26)),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: _thumbnailScrollController,
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              itemCount: _mediaFiles.length,
-                              itemBuilder: (context, index) {
-                                final media = _mediaFiles[index];
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: MediaThumbnail(
-                                    key: ValueKey(media['path']),
-                                    media: media,
-                                    onTap: () => _previewMedia(media),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                      
-                    // 2. Transcription Area with Gradient Fade
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: ListView(
-                              padding: const EdgeInsets.only(bottom: 60),
-                              children: [
-                                Text(
-                                  "Transcription",
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black38,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    height: 1.6,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      // 1. Thumbnail Area (Top) with top margin for safe area
+                      Container(
+                        height: size.height * 0.25,
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(
+                          top: 60,
+                          left: 20,
+                          right: 20,
+                          bottom: 20,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.black.withOpacity(0.05),
                           ),
-                          // Bottom Fade Effect (Gradient)
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: 60,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.white.withOpacity(0),
-                                    Colors.white,
+                        ),
+                        child: _mediaFiles.isEmpty
+                            ? const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.image_outlined,
+                                      color: Colors.black26,
+                                      size: 40,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      "No Media Yet",
+                                      style: TextStyle(color: Colors.black26),
+                                    ),
                                   ],
                                 ),
+                              )
+                            : ListView.builder(
+                                controller: _thumbnailScrollController,
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                itemCount: _mediaFiles.length,
+                                itemBuilder: (context, index) {
+                                  final media = _mediaFiles[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: MediaThumbnail(
+                                      key: ValueKey(media['path']),
+                                      media: media,
+                                      onTap: () => _previewMedia(media),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+
+                      // 2. Transcription Area with Gradient Fade
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: ListView(
+                                padding: const EdgeInsets.only(bottom: 60),
+                                children: [
+                                  Text(
+                                    "Transcription",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0XFF596939),
+                                          letterSpacing: 1.2,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(
+                                          height: 1.6,
+                                          color: Colors.black87,
+                                        ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                            // Bottom Fade Effect (Gradient)
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: 60,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white.withOpacity(0),
+                                      Colors.white,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
                     ],
                   ),
                 ),
               ),
-          ),
-        ],
-      ), // Closes Stack
-    ), // Closes SizedBox.expand
+            ),
+          ],
+        ), // Closes Stack
+      ), // Closes SizedBox.expand
     ); // Closes Scaffold
   }
 
@@ -447,13 +486,20 @@ class _HomePageState extends State<HomePage> {
                   setState(() {
                     final initialCount = _mediaFiles.length;
                     // Remove all occurrences by path just in case
-                    _mediaFiles.removeWhere((item) => item['path'] == media['path']);
+                    _mediaFiles.removeWhere(
+                      (item) => item['path'] == media['path'],
+                    );
                     // Create a new list to ensure rebuilds
                     _mediaFiles = List.from(_mediaFiles);
-                    debugPrint('Deleted. Initial count: $initialCount, New count: ${_mediaFiles.length}');
+                    debugPrint(
+                      'Deleted. Initial count: $initialCount, New count: ${_mediaFiles.length}',
+                    );
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Media removed.'), duration: Duration(seconds: 1)),
+                    const SnackBar(
+                      content: Text('Media removed.'),
+                      duration: Duration(seconds: 1),
+                    ),
                   );
                 } catch (e) {
                   debugPrint('Error deleting: $e');
@@ -462,10 +508,16 @@ class _HomePageState extends State<HomePage> {
                 Navigator.of(context).pop();
                 // Additionally pop the preview dialog if it was open
                 if (Navigator.of(context).canPop()) {
-                   Navigator.of(context).pop();
+                  Navigator.of(context).pop();
                 }
               },
-              child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              child: const Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -494,14 +546,22 @@ class _HomePageState extends State<HomePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                   child: const Row(
                     children: [
                       Icon(Icons.delete_outline, size: 20),
                       SizedBox(width: 8),
-                      Text("Delete Media", style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        "Delete Media",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
@@ -544,5 +604,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
-
