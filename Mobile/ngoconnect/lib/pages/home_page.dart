@@ -10,6 +10,10 @@ import 'package:video_player/video_player.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../components/main/titlebar.dart';
 import '../components/main/history_card.dart';
+import '../components/main/floating_nav_bar.dart';
+import '../components/recording/media_preview_player.dart';
+import '../components/recording/media_thumbnail.dart';
+import '../components/recording/recording_action_sheet.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -274,7 +278,18 @@ class _HomePageState extends State<HomePage> {
                   child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
                     child: _isRecordingMode
-                        ? _buildRecordingBottomUI()
+                        ? RecordingActionSheet(
+                            isRecordingAudio: _isRecordingAudio,
+                            recordingSeconds: _recordingSeconds,
+                            amplitudes: _amplitudes,
+                            onRecordVideo: _recordVideo,
+                            onToggleAudioRecording: _toggleAudioRecording,
+                            onTakePhoto: _takePhoto,
+                            onSubmit: () {
+                              // TODO: Submit review logic
+                            },
+                            onCancel: _toggleRecordingMode,
+                          )
                         : _buildClosedButtonUI(context),
                   ),
                 ),
@@ -292,7 +307,7 @@ class _HomePageState extends State<HomePage> {
             left: padding,
             right: padding,
             height: 70, // Required for proper AnimatedPositioned bounds!
-            child: _buildFloatingNavBar(),
+            child: const FloatingNavBar(),
           ),
 
           // ---------------------------------------------------
@@ -340,7 +355,14 @@ class _HomePageState extends State<HomePage> {
                               itemCount: _mediaFiles.length,
                               itemBuilder: (context, index) {
                                 final media = _mediaFiles[index];
-                                return _buildMediaThumbnail(index, media, key: ValueKey(media['path']));
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: MediaThumbnail(
+                                    key: ValueKey(media['path']),
+                                    media: media,
+                                    onTap: () => _previewMedia(media),
+                                  ),
+                                );
                               },
                             ),
                     ),
@@ -499,51 +521,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMediaThumbnail(int index, Map<String, dynamic> media, {Key? key}) {
-    Widget content;
-    if (media['type'] == 'photo') {
-      content = Image.file(File(media['path']), fit: BoxFit.cover);
-    } else if (media['type'] == 'video') {
-      content = Stack(
-        fit: StackFit.expand,
-        children: [
-          if (media['thumbnail'] != null)
-             Image.memory(media['thumbnail'], fit: BoxFit.cover),
-          Container(color: Colors.black26), // Dark overlay
-          const Center(child: Icon(Icons.play_circle_fill, color: Colors.white, size: 32)),
-        ],
-      );
-    } else if (media['type'] == 'audio') {
-      content = const Center(child: Icon(Icons.audiotrack, color: Colors.black54, size: 32));
-    } else {
-      content = const Center(child: Icon(Icons.file_present));
-    }
-
-    return Padding(
-      key: key,
-      padding: const EdgeInsets.only(right: 12),
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              onTap: () => _previewMedia(media),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: content,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // The small state: The Button content
   Widget _buildClosedButtonUI(BuildContext context) {
     return SizedBox(
@@ -566,339 +543,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // The expanded state: Action Sheet that fits content
-  Widget _buildRecordingBottomUI() {
-    return Column(
-      mainAxisSize: MainAxisSize.min, // Important: Fits content
-      children: [
-        // Aesthetic drag handle indicator
-        Container(
-          margin: const EdgeInsets.only(top: 12, bottom: 20),
-          height: 5,
-          width: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        
-        if (_isRecordingAudio)
-          Container(
-            height: 40,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            margin: const EdgeInsets.only(bottom: 20),
-            child: Row(
-              children: [
-                Text(
-                  '${(_recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_recordingSeconds % 60).toString().padLeft(2, '0')}',
-                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(width: 16), // Space between time and lines
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: _amplitudes.map((amp) {
-                      double height = ((amp + 50) / 50 * 35);
-                      if (height < 5) height = 5;
-                      if (height > 35) height = 35;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        margin: const EdgeInsets.only(left: 3),
-                        width: 4,
-                        height: height,
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.videocam_outlined,
-                  label: "Video",
-                  onTap: _recordVideo,
-                ),
-              ),
-              Expanded(
-                child: _buildActionButton(
-                  icon: _isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
-                  label: _isRecordingAudio ? "Stop" : "Voice",
-                  iconColor: _isRecordingAudio ? Colors.red : Colors.white,
-                  onTap: _toggleAudioRecording,
-                ),
-              ),
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.camera_alt_outlined,
-                  label: "Photo",
-                  onTap: _takePhoto,
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Submit for Review Button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              onPressed: () {
-                // TODO: Submit review logic
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF68417E),
-                elevation: 0,
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-              ),
-              child: const Text(
-                "Submit for Review", 
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-        
-        // Cancel/Close Button
-        Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
-          child: SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: OutlinedButton(
-              onPressed: _toggleRecordingMode,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white24),
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-              ),
-              child: const Text(
-                "Cancel", 
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Icon(icon, color: iconColor ?? Colors.white, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Floating Navigation Bar UI
-  Widget _buildFloatingNavBar() {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(Icons.home_rounded, "Home", true),
-          _buildNavItem(Icons.notifications_none_rounded, "Alerts", false),
-          _buildNavItem(Icons.history_rounded, "History", false),
-          _buildNavItem(Icons.person_outline_rounded, "Profile", false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isSelected) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon, 
-          color: isSelected ? const Color(0xFF68417E) : Colors.black38,
-          size: 26, // Slightly larger icon for tap area
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF68417E) : Colors.black38,
-            fontSize: 10,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
-class MediaPreviewPlayer extends StatefulWidget {
-  final Map<String, dynamic> media;
-  const MediaPreviewPlayer({super.key, required this.media});
-  
-  @override
-  State<MediaPreviewPlayer> createState() => _MediaPreviewPlayerState();
-}
 
-class _MediaPreviewPlayerState extends State<MediaPreviewPlayer> {
-  VideoPlayerController? _videoController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _isPlaying = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.media['type'] == 'video') {
-       _videoController = VideoPlayerController.file(File(widget.media['path']))
-         ..initialize().then((_) {
-           setState(() {});
-           _videoController!.play();
-           _isPlaying = true;
-         });
-       _videoController!.addListener(() {
-         if (!mounted) return;
-         setState(() {
-           _isPlaying = _videoController!.value.isPlaying;
-         });
-       });
-    } else if (widget.media['type'] == 'audio') {
-       _audioPlayer.play(DeviceFileSource(widget.media['path']));
-       _isPlaying = true;
-       
-       _audioPlayer.onPlayerStateChanged.listen((state) {
-         if (!mounted) return;
-         setState(() { _isPlaying = state == PlayerState.playing; });
-       });
-    }
-  }
-
-  @override
-  void dispose() {
-    _videoController?.dispose();
-    _audioPlayer.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.media['type'] == 'photo') {
-      return InteractiveViewer(child: Image.file(File(widget.media['path'])));
-    } else if (widget.media['type'] == 'video') {
-      return _videoController != null && _videoController!.value.isInitialized
-          ? AspectRatio(
-              aspectRatio: _videoController!.value.aspectRatio,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      if (_videoController!.value.isPlaying) {
-                        _videoController!.pause();
-                      } else {
-                        _videoController!.play();
-                      }
-                    },
-                    child: VideoPlayer(_videoController!),
-                  ),
-                  if (!_isPlaying)
-                    const Center(
-                      child: Icon(Icons.play_circle_fill, color: Colors.white54, size: 64),
-                    ),
-                  VideoProgressIndicator(_videoController!, allowScrubbing: true),
-                ]
-              ),
-            )
-          : const SizedBox(
-              height: 200, 
-              child: Center(child: CircularProgressIndicator(color: Colors.white))
-            );
-    } else if (widget.media['type'] == 'audio') {
-      return Container(
-        width: double.infinity,
-        height: 200,
-        color: Colors.black87,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.audiotrack, size: 64, color: Colors.white),
-            const SizedBox(height: 20),
-            IconButton(
-              icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled),
-              color: Colors.white,
-              iconSize: 48,
-              onPressed: () {
-                if (_isPlaying) {
-                  _audioPlayer.pause();
-                } else {
-                  _audioPlayer.resume();
-                }
-              },
-            )
-          ],
-        ),
-      );
-    }
-    return const SizedBox.shrink();
-  }
-}
