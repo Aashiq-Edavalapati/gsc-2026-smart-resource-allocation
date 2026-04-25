@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import prisma from "./config/db.js";
 import routes from "./routes/index.js";
+import { apiLimiter } from "./middlewares/rateLimiter.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.get("/", (req, res) => {
 });
 
 // API Endpoints
+app.use('/api/', apiLimiter); // Handle rate limiting for all the requests
 app.use("/api/v1", routes);
 
 // Error handling
