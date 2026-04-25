@@ -173,6 +173,9 @@ class _HomePageState extends State<HomePage> {
             // ---------------------------------------------------
             // 1. BASE LAYER: Content
             // ---------------------------------------------------
+          // ---------------------------------------------------
+          // 2. BASE LAYER: Content (Background)
+          // ---------------------------------------------------
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: padding),
@@ -236,7 +239,64 @@ class _HomePageState extends State<HomePage> {
           ),
 
           // ---------------------------------------------------
-          // 2. TOP LAYER (60% Scren bounds)
+          // 2. BOTTOM LAYER (Transforms from Button)
+          // ---------------------------------------------------
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            // If closed: Anchor above bottom nav bar. If open: Snap to absolute bottom
+            bottom: _isRecordingMode ? 0 : padding + 85,
+            left: _isRecordingMode ? 0 : padding,
+            right: _isRecordingMode ? 0 : padding,
+            height: _isRecordingMode ? null : buttonHeight, // null height allows it to fit content
+            child: GestureDetector(
+              onTap: _isRecordingMode ? null : _toggleRecordingMode,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF68417E),
+                  borderRadius: _isRecordingMode 
+                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
+                      : BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: _isRecordingMode 
+                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
+                      : BorderRadius.circular(24),
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: _isRecordingMode
+                        ? _buildRecordingBottomUI()
+                        : _buildClosedButtonUI(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ---------------------------------------------------
+          // 3. FLOATING NAV BAR
+          // ---------------------------------------------------
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            bottom: _isRecordingMode ? -100 : padding, // Slide down completely offscreen when recording
+            left: padding,
+            right: padding,
+            height: 70, // Required for proper AnimatedPositioned bounds!
+            child: _buildFloatingNavBar(),
+          ),
+
+          // ---------------------------------------------------
+          // 4. TOP LAYER (Foreground - Highest Z-Index)
           // ---------------------------------------------------
           AnimatedPositioned(
             duration: const Duration(milliseconds: 350),
@@ -340,63 +400,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
           ),
-
-          // ---------------------------------------------------
-          // 3. FLOATING NAV BAR
-          // ---------------------------------------------------
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            bottom: _isRecordingMode ? -100 : padding, // Slide down completely offscreen when recording
-            left: padding,
-            right: padding,
-            height: 70, // Required for proper AnimatedPositioned bounds!
-            child: _buildFloatingNavBar(),
-          ),
-
-          // ---------------------------------------------------
-          // 4. BOTTOM LAYER (Transforms from Button)
-          // ---------------------------------------------------
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            // If closed: Anchor above bottom nav bar. If open: Snap to absolute bottom
-            bottom: _isRecordingMode ? 0 : padding + 85,
-            left: _isRecordingMode ? 0 : padding,
-            right: _isRecordingMode ? 0 : padding,
-            height: _isRecordingMode ? null : buttonHeight, // null height allows it to fit content
-            child: GestureDetector(
-              onTap: _isRecordingMode ? null : _toggleRecordingMode,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF68417E),
-                  borderRadius: _isRecordingMode 
-                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
-                      : BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    )
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: _isRecordingMode 
-                      ? const BorderRadius.vertical(top: Radius.circular(32)) 
-                      : BorderRadius.circular(24),
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: _isRecordingMode
-                        ? _buildRecordingBottomUI()
-                        : _buildClosedButtonUI(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ), // Closes Stack
     ), // Closes SizedBox.expand
@@ -433,7 +436,12 @@ class _HomePageState extends State<HomePage> {
                 } catch (e) {
                   debugPrint('Error deleting: $e');
                 }
+                // Pop the confirmation dialog
                 Navigator.of(context).pop();
+                // Additionally pop the preview dialog if it was open
+                if (Navigator.of(context).canPop()) {
+                   Navigator.of(context).pop();
+                }
               },
               child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
@@ -456,6 +464,25 @@ class _HomePageState extends State<HomePage> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: MediaPreviewPlayer(media: media),
+              ),
+              Positioned(
+                bottom: 20,
+                child: ElevatedButton(
+                  onPressed: () => _confirmDelete(media),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 20),
+                      SizedBox(width: 8),
+                      Text("Delete Media", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
               ),
               Positioned(
                 top: 0,
@@ -509,23 +536,6 @@ class _HomePageState extends State<HomePage> {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: content,
-              ),
-            ),
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
-                  onPressed: () => _confirmDelete(media),
-                  tooltip: 'Delete Media',
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(8),
-                ),
               ),
             ),
           ],
