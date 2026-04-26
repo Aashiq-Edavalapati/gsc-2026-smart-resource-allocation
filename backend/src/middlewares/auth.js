@@ -17,8 +17,13 @@ export const verifyFirebaseToken = async (req, res, next) => {
       return res.status(401).json({ error: 'No authorization token' });
     }
 
+    const auth = firebaseAuth();
+    if (!auth) {
+      return res.status(503).json({ error: 'Authentication service unavailable' });
+    }
+
     // Firebase verifies the token signature, expiry, etc.
-    const decoded = await firebaseAuth.verifyIdToken(token);
+    const decoded = await auth.verifyIdToken(token);
 
     // Look up user in Postgres by Firebase UID (stored in providerId)
     const user = await prisma.user.findFirst({
