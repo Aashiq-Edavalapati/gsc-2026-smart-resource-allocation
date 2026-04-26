@@ -37,6 +37,7 @@ steps:
       - --min-instances=0
       - --max-instances=2
       - --set-secrets=DATABASE_URL=DATABASE_URL:latest,FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest,CLOUDINARY_API_KEY=CLOUDINARY_API_KEY:latest,CLOUDINARY_API_SECRET=CLOUDINARY_API_SECRET:latest,CLOUDINARY_CLOUD_NAME=CLOUDINARY_CLOUD_NAME:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,HF_TOKEN=HF_TOKEN:latest
+      - --timeout=300
 
 images:
   - 'asia-south1-docker.pkg.dev/$PROJECT_ID/backend-repo/backend:latest'

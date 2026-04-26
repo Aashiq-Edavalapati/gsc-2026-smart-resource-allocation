@@ -64,9 +64,13 @@ app.use((err, req, res, next) => {
 });
 
 /**
- * Database connection check
+ * Start the server
  */
-async function checkDBConnection() {
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`Server running on port ${PORT}`);
+
   try {
     await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;
@@ -76,19 +80,7 @@ async function checkDBConnection() {
     }
   } catch (error) {
     console.error("Database connection failed:", error);
-    process.exit(1);
   }
-}
-
-const PORT = process.env.PORT || 5000;
-
-/**
- * Start server
- */
-checkDBConnection().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
 });
 
 /**
