@@ -1,13 +1,22 @@
-options:
-  working_dir: backend
-
 steps:
+  # Build image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/backend-repo/backend:latest', '.']
+    dir: 'backend'
+    args: [
+      'build',
+      '-t',
+      'asia-south1-docker.pkg.dev/$PROJECT_ID/backend-repo/backend:latest',
+      '.'
+    ]
 
+  # Push image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/backend-repo/backend:latest']
+    args: [
+      'push',
+      'asia-south1-docker.pkg.dev/$PROJECT_ID/backend-repo/backend:latest'
+    ]
 
+  # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
