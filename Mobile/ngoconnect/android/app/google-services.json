@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "118981447809",
+    "project_id": "gsc-2026-fea7c",
+    "storage_bucket": "gsc-2026-fea7c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:118981447809:android:cbcc17c68a4d77a5617d80",
+        "android_client_info": {
+          "package_name": "com.example.ngoconnect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "118981447809-upbaomte68p02pdjpah5q0fpt0jgou0n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzh9349ev3eoGsaAEU0rmbj6xQk6sEEec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "118981447809-upbaomte68p02pdjpah5q0fpt0jgou0n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "118981447809-vjmar9vs99ehf37np53rnc9u33fhhb2l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ngoconnect"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

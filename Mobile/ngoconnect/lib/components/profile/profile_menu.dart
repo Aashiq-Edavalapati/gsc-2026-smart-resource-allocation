@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 class ProfileMenuItem {
   final IconData icon;
   final String title;
+  final VoidCallback? onTap;
 
-  ProfileMenuItem(this.icon, this.title);
+  ProfileMenuItem(this.icon, this.title, {this.onTap});
 }
 
 class ProfileMenu extends StatelessWidget {
@@ -65,7 +66,7 @@ class ProfileMenu extends StatelessWidget {
                   size: 16,
                   color: Colors.black26,
                 ),
-                onTap: () {},
+                onTap: item.onTap,
               );
             },
           ),
