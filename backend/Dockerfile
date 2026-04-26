@@ -1,24 +1,24 @@
-# Use lightweight Node image
-FROM node:20-alpine
+# ---------- BUILD STAGE ----------
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files first (better caching)
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy rest of the code
 COPY . .
 
-# Prisma generate (important!)
 RUN npx prisma generate
 
-# Expose port (match your backend port)
-EXPOSE 3000
+# ---------- PRODUCTION STAGE ----------
+FROM node:20-alpine
 
-# Start the server
-# CMD ["node", "src/index.js"]
-CMD ["npm", "run", "dev"]
+WORKDIR /app
+
+COPY --from=builder /app /app
+
+RUN npm prune --omit=dev
+
+EXPOSE 8080
+
+CMD ["node", "src/index.js"]
