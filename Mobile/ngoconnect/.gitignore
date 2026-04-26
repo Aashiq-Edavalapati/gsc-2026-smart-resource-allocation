@@ -1,0 +1,89 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launched configurations and tasks properly used by Visual Studio Code.
+# But it also contains settings that are shared with other developers in the project.
+# .vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication logging
+/pigeons/
+
+# Android related
+**/android/**/generated/
+**/android/gradle/
+**/android/local.properties
+**/android/app/src/main/res/values/strings.xml
+**/android/app/src/main/res/values/ids.xml
+**/android/app/src/main/res/values/integers.xml
+**/android/app/src/main/res/values/bools.xml
+**/android/app/src/main/res/values/colors.xml
+**/android/app/src/main/res/values/dimens.xml
+**/android/app/src/main/res/values/styles.xml
+**/android/app/src/main/res/values/themes.xml
+**/android/app/src/main/res/values/public.xml
+**/android/app/src/main/res/values-v21/styles.xml
+**/android/app/src/main/res/values-v21/themes.xml
+**/android/app/src/main/res/values-night/themes.xml
+**/android/app/src/main/res/values-night-v21/themes.xml
+
+# iOS related
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.[mh]
+**/ios/Runner/GeneratedPluginRegistrant.swift
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/DerivedData/
+*.reveal
+
+# macOS related
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Generated.xcconfig
+**/macos/Flutter/flutter_export_environment.sh
+**/macos/Runner/GeneratedPluginRegistrant.*
+**/macos/Pods/
+
+# Linux related
+**/linux/flutter/ephemeral/
+
+# Windows related
+**/windows/flutter/ephemeral/
+
+# COVERAGE reports
+coverage/
