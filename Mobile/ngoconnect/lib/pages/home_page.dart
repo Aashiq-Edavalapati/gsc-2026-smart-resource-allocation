@@ -14,6 +14,7 @@ import '../components/main/floating_nav_bar.dart';
 import '../components/recording/media_preview_player.dart';
 import '../components/recording/media_thumbnail.dart';
 import '../components/recording/recording_action_sheet.dart';
+import './profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,6 +26,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // This state variable controls whether the recording layer is open or not
   bool _isRecordingMode = false;
+  int _currentNavIndex = 0;
 
   final ImagePicker _picker = ImagePicker();
   final AudioRecorder _audioRecorder = AudioRecorder();
@@ -164,6 +166,25 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedHistoryItem = item;
       _isRecordingMode = true;
+    });
+  }
+
+  void _onNavItemSelected(int index) {
+    if (index == 3) {
+      // Profile page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      ).then((_) {
+        // When coming back, reset the nav index to Home (0) 
+        // to maintain the "Home" state on the main page.
+        setState(() {
+          _currentNavIndex = 0;
+        });
+      });
+    }
+    setState(() {
+      _currentNavIndex = index;
     });
   }
 
@@ -350,7 +371,10 @@ class _HomePageState extends State<HomePage> {
               left: padding,
               right: padding,
               height: 70, // Required for proper AnimatedPositioned bounds!
-              child: const FloatingNavBar(),
+              child: FloatingNavBar(
+                currentIndex: _currentNavIndex,
+                onItemSelected: _onNavItemSelected,
+              ),
             ),
 
             // ---------------------------------------------------

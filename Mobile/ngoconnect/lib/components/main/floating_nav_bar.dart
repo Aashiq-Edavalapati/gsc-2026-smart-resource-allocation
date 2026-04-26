@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 class FloatingNavBar extends StatelessWidget {
-  const FloatingNavBar({super.key});
+  final int currentIndex;
+  final Function(int) onItemSelected;
+
+  const FloatingNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onItemSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,34 +28,39 @@ class FloatingNavBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.home_rounded, "Home", true),
-          _buildNavItem(Icons.notifications_none_rounded, "Alerts", false),
-          _buildNavItem(Icons.history_rounded, "History", false),
-          _buildNavItem(Icons.person_outline_rounded, "Profile", false),
+          _buildNavItem(0, Icons.home_rounded, "Home"),
+          _buildNavItem(1, Icons.notifications_none_rounded, "Alerts"),
+          _buildNavItem(2, Icons.history_rounded, "History"),
+          _buildNavItem(3, Icons.person_outline_rounded, "Profile"),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isSelected) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isSelected ? const Color(0xFF68417E) : Colors.black38,
-          size: 26,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = currentIndex == index;
+    return GestureDetector(
+      onTap: () => onItemSelected(index),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
             color: isSelected ? const Color(0xFF68417E) : Colors.black38,
-            fontSize: 10,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            size: 26,
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF68417E) : Colors.black38,
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
