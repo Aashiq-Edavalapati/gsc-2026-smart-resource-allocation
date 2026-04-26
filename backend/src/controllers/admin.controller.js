@@ -7,11 +7,20 @@ export const getPendingOrgs = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
 
-export const verifyOrg = async (req, res) => {
+export const addContactDetails = async (req, res) => {
   try {
-    const org = await adminService.verifyOrganization(req.params.id);
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
+    const org = await adminService.addContact(req.params.id, email);
+
     res.json({ success: true, data: org });
-  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
 };
 
 export const getStats = async (req, res) => {
