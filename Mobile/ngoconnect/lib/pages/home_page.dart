@@ -30,8 +30,8 @@ class _HomePageState extends State<HomePage> {
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecordingAudio = false;
 
-  // Stores media: { 'type': 'photo'|'video'|'audio', 'path': String, 'thumbnail': Uint8List? }
   List<Map<String, dynamic>> _mediaFiles = [];
+  Map<String, dynamic>? _selectedHistoryItem;
 
   final ScrollController _thumbnailScrollController = ScrollController();
   Timer? _recordingTimer;
@@ -154,6 +154,16 @@ class _HomePageState extends State<HomePage> {
   void _toggleRecordingMode() {
     setState(() {
       _isRecordingMode = !_isRecordingMode;
+      if (!_isRecordingMode) {
+        _selectedHistoryItem = null;
+      }
+    });
+  }
+
+  void _openHistoryItem(Map<String, dynamic> item) {
+    setState(() {
+      _selectedHistoryItem = item;
+      _isRecordingMode = true;
     });
   }
 
@@ -227,19 +237,35 @@ class _HomePageState extends State<HomePage> {
                                 duration: "04:20",
                                 photoCount: 3,
                                 videoCount: 1,
-                                onViewTap: () {},
+                                onViewTap: () => _openHistoryItem({
+                                  'title': 'Community Outreach',
+                                  'transcription': 'The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies.',
+                                  'media': [
+                                    {'type': 'photo', 'path': 'https://plus.unsplash.com/premium_photo-1683121366410-d8120fc35b81?q=80&w=2940&auto=format&fit=crop'},
+                                    {'type': 'photo', 'path': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=2813&auto=format&fit=crop'},
+                                    {'type': 'video', 'path': 'invalid', 'thumbnail': null},
+                                  ],
+                                }),
                               ),
                               HistoryCard(
                                 title: "Resource Allocation",
                                 duration: "10:15",
                                 photoCount: 5,
-                                onViewTap: () {},
+                                onViewTap: () => _openHistoryItem({
+                                  'title': 'Resource Allocation',
+                                  'transcription': 'Analysis of the strategic reserves reveals a need for immediate replenishment of potable water and non-perishable food items in the northern sector.',
+                                  'media': [],
+                                }),
                               ),
                               HistoryCard(
                                 title: "Donation Drive",
                                 duration: "02:45",
                                 videoCount: 2,
-                                onViewTap: () {},
+                                onViewTap: () => _openHistoryItem({
+                                  'title': 'Donation Drive',
+                                  'transcription': 'The donation drive exceeded expectations, collecting over 500 kits of basic necessities. Team is preparing for dispatch tomorrow at 6 AM.',
+                                  'media': [],
+                                }),
                               ),
                             ],
                           ),
@@ -299,6 +325,7 @@ class _HomePageState extends State<HomePage> {
                               onRecordVideo: _recordVideo,
                               onToggleAudioRecording: _toggleAudioRecording,
                               onTakePhoto: _takePhoto,
+                              isViewingHistory: _selectedHistoryItem != null,
                               onSubmit: () {
                                 // TODO: Submit review logic
                               },
@@ -360,7 +387,9 @@ class _HomePageState extends State<HomePage> {
                             color: Colors.black.withOpacity(0.05),
                           ),
                         ),
-                        child: _mediaFiles.isEmpty
+                        child: (_selectedHistoryItem != null 
+                                ? (_selectedHistoryItem!['media'] as List).isEmpty 
+                                : _mediaFiles.isEmpty)
                             ? const Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -372,7 +401,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     SizedBox(height: 8),
                                     Text(
-                                      "No Media Yet",
+                                      "No Media Found",
                                       style: TextStyle(color: Colors.black26),
                                     ),
                                   ],
@@ -385,9 +414,13 @@ class _HomePageState extends State<HomePage> {
                                   horizontal: 16,
                                   vertical: 16,
                                 ),
-                                itemCount: _mediaFiles.length,
+                                itemCount: _selectedHistoryItem != null 
+                                    ? (_selectedHistoryItem!['media'] as List).length 
+                                    : _mediaFiles.length,
                                 itemBuilder: (context, index) {
-                                  final media = _mediaFiles[index];
+                                  final media = _selectedHistoryItem != null 
+                                      ? _selectedHistoryItem!['media'][index] 
+                                      : _mediaFiles[index];
                                   return Padding(
                                     padding: const EdgeInsets.only(right: 12),
                                     child: MediaThumbnail(
@@ -424,7 +457,9 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
+                                    _selectedHistoryItem != null 
+                                        ? _selectedHistoryItem!['transcription'] 
+                                        : "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
                                           height: 1.6,

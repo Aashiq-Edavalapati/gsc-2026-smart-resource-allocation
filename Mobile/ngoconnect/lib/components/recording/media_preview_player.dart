@@ -19,13 +19,20 @@ class _MediaPreviewPlayerState extends State<MediaPreviewPlayer> {
   @override
   void initState() {
     super.initState();
+    final String path = widget.media['path'];
+    final bool isNetwork = path.startsWith('http');
+
     if (widget.media['type'] == 'video') {
-       _videoController = VideoPlayerController.file(File(widget.media['path']))
-         ..initialize().then((_) {
-           setState(() {});
-           _videoController!.play();
-           _isPlaying = true;
-         });
+       _videoController = isNetwork
+         ? VideoPlayerController.networkUrl(Uri.parse(path))
+         : VideoPlayerController.file(File(path));
+       
+       _videoController!.initialize().then((_) {
+         if (!mounted) return;
+         setState(() {});
+         _videoController!.play();
+         _isPlaying = true;
+       });
        _videoController!.addListener(() {
          if (!mounted) return;
          setState(() {
@@ -33,7 +40,7 @@ class _MediaPreviewPlayerState extends State<MediaPreviewPlayer> {
          });
        });
     } else if (widget.media['type'] == 'audio') {
-       _audioPlayer.play(DeviceFileSource(widget.media['path']));
+       _audioPlayer.play(isNetwork ? UrlSource(path) : DeviceFileSource(path));
        _isPlaying = true;
        
        _audioPlayer.onPlayerStateChanged.listen((state) {
@@ -53,7 +60,12 @@ class _MediaPreviewPlayerState extends State<MediaPreviewPlayer> {
   @override
   Widget build(BuildContext context) {
     if (widget.media['type'] == 'photo') {
-      return InteractiveViewer(child: Image.file(File(widget.media['path'])));
+      final String path = widget.media['path'];
+      return InteractiveViewer(
+        child: path.startsWith('http')
+          ? Image.network(path, fit: BoxFit.contain)
+          : Image.file(File(path), fit: BoxFit.contain),
+      );
     } else if (widget.media['type'] == 'video') {
       return _videoController != null && _videoController!.value.isInitialized
           ? AspectRatio(

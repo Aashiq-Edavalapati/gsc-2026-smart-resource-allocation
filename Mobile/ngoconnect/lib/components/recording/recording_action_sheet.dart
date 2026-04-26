@@ -7,6 +7,7 @@ class RecordingActionSheet extends StatelessWidget {
   final VoidCallback onRecordVideo;
   final VoidCallback onToggleAudioRecording;
   final VoidCallback onTakePhoto;
+  final bool isViewingHistory;
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
 
@@ -18,6 +19,7 @@ class RecordingActionSheet extends StatelessWidget {
     required this.onRecordVideo,
     required this.onToggleAudioRecording,
     required this.onTakePhoto,
+    required this.isViewingHistory,
     required this.onSubmit,
     required this.onCancel,
   });
@@ -38,7 +40,7 @@ class RecordingActionSheet extends StatelessWidget {
           ),
         ),
 
-        if (isRecordingAudio)
+        if (isRecordingAudio && !isViewingHistory)
           Container(
             height: 40,
             width: double.infinity,
@@ -76,36 +78,37 @@ class RecordingActionSheet extends StatelessWidget {
             ),
           ),
 
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.videocam_outlined,
-                  label: "Video",
-                  onTap: onRecordVideo,
+        if (!isViewingHistory)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.videocam_outlined,
+                    label: "Video",
+                    onTap: onRecordVideo,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _buildActionButton(
-                  icon: isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
-                  label: isRecordingAudio ? "Stop" : "Voice",
-                  iconColor: isRecordingAudio ? Colors.red : Colors.white,
-                  onTap: onToggleAudioRecording,
+                Expanded(
+                  child: _buildActionButton(
+                    icon: isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
+                    label: isRecordingAudio ? "Stop" : "Voice",
+                    iconColor: isRecordingAudio ? Colors.red : Colors.white,
+                    onTap: onToggleAudioRecording,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.camera_alt_outlined,
-                  label: "Photo",
-                  onTap: onTakePhoto,
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.camera_alt_outlined,
+                    label: "Photo",
+                    onTap: onTakePhoto,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
         const SizedBox(height: 24),
 
@@ -125,9 +128,9 @@ class RecordingActionSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(32),
                 ),
               ),
-              child: const Text(
-                "Submit for Review",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Text(
+                isViewingHistory ? "Update Recording" : "Submit for Review",
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),

@@ -14,8 +14,12 @@ class MediaThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content;
+    final bool isNetwork = media['path']?.toString().startsWith('http') ?? false;
+
     if (media['type'] == 'photo') {
-      content = Image.file(File(media['path']), fit: BoxFit.cover);
+      content = isNetwork 
+          ? Image.network(media['path'], fit: BoxFit.cover)
+          : Image.file(File(media['path']), fit: BoxFit.cover);
     } else if (media['type'] == 'video') {
       content = Stack(
         fit: StackFit.expand,
