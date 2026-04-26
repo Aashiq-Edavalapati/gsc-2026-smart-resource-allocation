@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   GoogleAuthProvider,
   signInWithPopup,
 } from 'firebase/auth';
@@ -26,10 +26,15 @@ export class AuthService {
   }
 
   private initAuthListener() {
-    onAuthStateChanged(this.auth, (user) => {
+    onIdTokenChanged(this.auth, async (user) => {
       this.authUser.set(user);
       this.isLoggedIn.set(!!user);
       this.isLoading.set(false);
+
+      if (user) {
+        const token = await user.getIdToken();
+        console.log('🔥 Firebase ID Token:', token);
+      }
     });
   }
 
@@ -116,4 +121,3 @@ export class AuthService {
     return errorMap[error.code] || error.message || 'Authentication failed';
   }
 }
-

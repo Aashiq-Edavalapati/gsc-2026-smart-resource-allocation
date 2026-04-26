@@ -1,21 +1,20 @@
 import admin from 'firebase-admin';
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+let serviceAccount;
 
-const serviceAccount = JSON.parse(
-  readFileSync(
-    resolve(__dirname, '../../firebase-service-account.json'),
-    'utf8'
-  )
-);
+if (process.env.NODE_ENV === 'production') {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+  const fs = await import('fs');
+  serviceAccount = JSON.parse(
+    fs.readFileSync('./firebase-service-account.json', 'utf8')
+  );
+}
 
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    projectId: 'gsc-2026-fea7c',
+    projectId: serviceAccount.project_id,
   });
 }
 
