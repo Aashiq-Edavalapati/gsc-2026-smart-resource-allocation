@@ -16,6 +16,7 @@ import '../components/recording/media_thumbnail.dart';
 import '../components/recording/recording_action_sheet.dart';
 import './profile_page.dart';
 import './issues/issues_page.dart';
+import './tasks/tasks_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -171,7 +172,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onNavItemSelected(int index) {
-    if (index == 2) {
+    if (index == 1) {
+      // Tasks page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TasksPage()),
+      ).then((_) {
+        setState(() {
+          _currentNavIndex = 0;
+        });
+      });
+    } else if (index == 2) {
       // Issues page
       Navigator.push(
         context,

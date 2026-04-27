@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/issue_service.dart';
+import '../../services/task_service.dart';
 
 class IssueDetailsPage extends StatefulWidget {
   final String issueId;
@@ -13,20 +14,28 @@ class IssueDetailsPage extends StatefulWidget {
 class _IssueDetailsPageState extends State<IssueDetailsPage> {
   final _commentController = TextEditingController();
   Map<String, dynamic>? _issue;
+  List<dynamic> _tasks = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadIssue();
+    _loadData();
   }
 
-  Future<void> _loadIssue() async {
-    final issue = await Provider.of<IssueService>(context, listen: false).getIssueDetails(widget.issueId);
-    setState(() {
-      _issue = issue;
-      _isLoading = false;
-    });
+  Future<void> _loadData() async {
+    final results = await Future.wait([
+      Provider.of<IssueService>(context, listen: false).getIssueDetails(widget.issueId),
+      Provider.of<TaskService>(context, listen: false).getTasksForIssue(widget.issueId),
+    ]);
+    
+    if (mounted) {
+      setState(() {
+        _issue = results[0] as Map<String, dynamic>?;
+        _tasks = results[1] as List<dynamic>;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _postComment() async {
@@ -37,9 +46,18 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
       _commentController.text.trim(),
     );
 
-    if (success) {
+    if (success && mounted) {
       _commentController.clear();
-      _loadIssue(); // Refresh to show new comment
+      _loadData(); // Refresh to show new comment
+    }
+  }
+
+  Future<void> _applyForTask(String taskId) async {
+    final success = await Provider.of<TaskService>(context, listen: false).applyToTask(taskId);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Application submitted!")),
+      );
     }
   }
 
@@ -48,11 +66,18 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
     const primaryColor = Color(0xFF68417E);
 
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: primaryColor)));
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: primaryColor))
+      );
     }
 
     if (_issue == null) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text("Issue not found")));
+      return Scaffold(
+        appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
+        backgroundColor: Colors.white,
+        body: const Center(child: Text("Issue not found"))
+      );
     }
 
     final comments = _issue!['comments'] as List? ?? [];
@@ -82,7 +107,13 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
                   _issue!['description'] ?? "",
                   style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
                 ),
-                const SizedBox(height: 24),
+                if (_tasks.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  const Text("OPEN TASKS", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black26, letterSpacing: 1.1)),
+                  const SizedBox(height: 16),
+                  ..._tasks.map((t) => _buildTaskTile(t, primaryColor)).toList(),
+                ],
+                const SizedBox(height: 32),
                 const Divider(),
                 const SizedBox(height: 24),
                 const Text("COMMENTS", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black26, letterSpacing: 1.1)),
@@ -94,6 +125,37 @@ class _IssueDetailsPageState extends State<IssueDetailsPage> {
             ),
           ),
           _buildCommentInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskTile(dynamic task, Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8FC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryColor.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(task['title'] ?? "", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(task['description'] ?? "", style: const TextStyle(fontSize: 13, color: Colors.black54)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("${task['volunteersNeeded'] ?? 0} volunteers needed", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              TextButton(
+                onPressed: () => _applyForTask(task['id']),
+                child: const Text("Apply Now"),
+              ),
+            ],
+          ),
         ],
       ),
     );
