@@ -25,3 +25,7 @@ Thumbs.db
 /generated/prisma
 
 *.md
+
+# Firebase / Android
+**/google-services.json
+**/firebase-service-account.json

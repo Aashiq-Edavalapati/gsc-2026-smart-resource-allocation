@@ -90,3 +90,5 @@ coverage/
 
 # Environment Variables
 .env
+google-services.json
+GoogleService-Info.plist
