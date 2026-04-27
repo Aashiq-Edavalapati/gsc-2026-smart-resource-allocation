@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { sendOtpMail } from "../utils/sendMail.js";
+import { sendInviteMail } from "../utils/sendMail.js";
 import prisma from "../config/db.js";
 
 export const createOrganization = async (userId, data) => {
@@ -74,9 +75,46 @@ export const deleteOrganization = async (orgId) => {
 };
 
 // --- INVITES & MEMBERS ---
-
 export const inviteUserToOrg = async (orgId, email, role) => {
-  return prisma.organizationInvite.create({
+  // 1. Get org details (needed for email)
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { name: true }
+  });
+
+  if (!org) throw new Error("Organization not found");
+
+  const existing = await prisma.organizationInvite.findFirst({
+    where: {
+      email,
+      organizationId: orgId,
+      status: 'PENDING'
+    }
+  });
+
+  if (existing) {
+    throw new Error("Invite already sent");
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (user) {
+    const member = await prisma.organizationMember.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: user.id,
+          organizationId: orgId
+        }
+      }
+    });
+
+    if (member) {
+      throw new Error("User already in organization");
+    }
+  }
+
+  // 2. Create invite
+  const invite = await prisma.organizationInvite.create({
     data: {
       email,
       organizationId: orgId,
@@ -84,6 +122,16 @@ export const inviteUserToOrg = async (orgId, email, role) => {
       status: 'PENDING'
     }
   });
+
+  // 3. Send email (non-blocking ideally, but ok for now)
+  await sendInviteMail({
+    to: email,
+    orgName: org.name,
+    role,
+    inviteId: invite.id
+  });
+
+  return invite;
 };
 
 export const acceptInvite = async (userId, userEmail, inviteId) => {
