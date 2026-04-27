@@ -3,7 +3,12 @@ import { firebaseAuth } from "../config/firebase-admin.js";
 
 // Sync user
 export const syncUserService = async (token) => {
-  const decoded = await firebaseAuth.verifyIdToken(token);
+  const auth = firebaseAuth();
+  if (!auth) {
+    throw new Error('Authentication service unavailable');
+  }
+
+  const decoded = await auth.verifyIdToken(token);
 
   const { uid, email, name, firebase } = decoded;
 

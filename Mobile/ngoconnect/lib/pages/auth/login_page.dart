@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import './register_page.dart';
 
@@ -12,13 +13,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.login(
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
@@ -36,10 +37,12 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
+    final authService = Provider.of<AuthService>(context, listen: false);
     try {
-      await _authService.signInWithGoogle();
+      await authService.signInWithGoogle();
     } catch (e) {
-      if (mounted) {
+      // Only show error if the user is NOT actually logged in
+      if (mounted && authService.currentUser == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google login failed: $e')),
         );

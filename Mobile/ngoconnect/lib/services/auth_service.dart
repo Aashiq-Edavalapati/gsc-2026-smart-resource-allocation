@@ -3,13 +3,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-  
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+    serverClientId: dotenv.env['GOOGLE_SIGN_IN_SERVER_CLIENT_ID'],
+  );
+
   // Replace with your actual backend URL
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'https://backend-349232024775.asia-south1.run.app/api/v1';
 
   // State
   User? get currentUser => _auth.currentUser;
@@ -22,7 +26,8 @@ class AuthService {
         email: email,
         password: password,
       );
-      await _syncWithBackend(credential.user);
+      // Backend sync is non-critical — fire and forget
+      _syncWithBackend(credential.user);
       return credential;
     } catch (e) {
       debugPrint('Login Error: $e');
@@ -31,17 +36,22 @@ class AuthService {
   }
 
   // Register with Email & Password
-  Future<UserCredential?> register(String email, String password, String name) async {
+  Future<UserCredential?> register(
+    String email,
+    String password,
+    String name,
+  ) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       // Update display name in Firebase
       await credential.user?.updateDisplayName(name);
-      
-      await _syncWithBackend(credential.user);
+
+      // Backend sync is non-critical — fire and forget
+      _syncWithBackend(credential.user);
       return credential;
     } catch (e) {
       debugPrint('Register Error: $e');
@@ -55,14 +65,18 @@ class AuthService {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
-      await _syncWithBackend(userCredential.user);
+
+      // Backend sync is non-critical — don't let it block or fail the login
+      _syncWithBackend(userCredential.user);
+
       return userCredential;
     } catch (e) {
       debugPrint('Google Sign In Error: $e');
@@ -111,9 +125,7 @@ class AuthService {
       final idToken = await user.getIdToken();
       final response = await http.get(
         Uri.parse('$baseUrl/users/me'),
-        headers: {
-          'Authorization': 'Bearer $idToken',
-        },
+        headers: {'Authorization': 'Bearer $idToken'},
       );
 
       if (response.statusCode == 200) {

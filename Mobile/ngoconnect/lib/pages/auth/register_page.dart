@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -12,13 +13,13 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _register() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.register(
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _nameController.text.trim(),

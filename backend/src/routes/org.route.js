@@ -45,7 +45,9 @@ router.post('/:id/leave', orgController.leaveOrganization);
 router.post('/:id/invite', requireOrgRole(['OWNER', 'ADMIN']), orgController.inviteMember);
 
 // ---------- VERIFICATION ----------
-router.post('/:id/verify', requireOrgRole(['OWNER']), orgController.verifyOrg);
+router.post("/:id/initiate-verification", requireOrgRole(['OWNER']), orgController.initiateVerification);
+router.post("/:id/send-otp", requireOrgRole(['OWNER']), orgController.sendOtp);
+router.post('/:id/verify-otp', requireOrgRole(['OWNER']), orgController.verifyOtp);
 
 // ---------- DASHBOARD ----------
 router.get('/:id/dashboard', requireOrgRole(['ADMIN', 'OWNER']), orgController.getOrgDashboard);

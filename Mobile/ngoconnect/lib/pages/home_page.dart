@@ -176,7 +176,7 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(builder: (context) => const ProfilePage()),
       ).then((_) {
-        // When coming back, reset the nav index to Home (0) 
+        // When coming back, reset the nav index to Home (0)
         // to maintain the "Home" state on the main page.
         setState(() {
           _currentNavIndex = 0;
@@ -260,11 +260,24 @@ class _HomePageState extends State<HomePage> {
                                 videoCount: 1,
                                 onViewTap: () => _openHistoryItem({
                                   'title': 'Community Outreach',
-                                  'transcription': 'The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies.',
+                                  'transcription':
+                                      'The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies.',
                                   'media': [
-                                    {'type': 'photo', 'path': 'https://plus.unsplash.com/premium_photo-1683121366410-d8120fc35b81?q=80&w=2940&auto=format&fit=crop'},
-                                    {'type': 'photo', 'path': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=2813&auto=format&fit=crop'},
-                                    {'type': 'video', 'path': 'invalid', 'thumbnail': null},
+                                    {
+                                      'type': 'photo',
+                                      'path':
+                                          'https://plus.unsplash.com/premium_photo-1683121366410-d8120fc35b81?q=80&w=2940&auto=format&fit=crop',
+                                    },
+                                    {
+                                      'type': 'photo',
+                                      'path':
+                                          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=2813&auto=format&fit=crop',
+                                    },
+                                    {
+                                      'type': 'video',
+                                      'path': 'invalid',
+                                      'thumbnail': null,
+                                    },
                                   ],
                                 }),
                               ),
@@ -274,7 +287,8 @@ class _HomePageState extends State<HomePage> {
                                 photoCount: 5,
                                 onViewTap: () => _openHistoryItem({
                                   'title': 'Resource Allocation',
-                                  'transcription': 'Analysis of the strategic reserves reveals a need for immediate replenishment of potable water and non-perishable food items in the northern sector.',
+                                  'transcription':
+                                      'Analysis of the strategic reserves reveals a need for immediate replenishment of potable water and non-perishable food items in the northern sector.',
                                   'media': [],
                                 }),
                               ),
@@ -284,7 +298,8 @@ class _HomePageState extends State<HomePage> {
                                 videoCount: 2,
                                 onViewTap: () => _openHistoryItem({
                                   'title': 'Donation Drive',
-                                  'transcription': 'The donation drive exceeded expectations, collecting over 500 kits of basic necessities. Team is preparing for dispatch tomorrow at 6 AM.',
+                                  'transcription':
+                                      'The donation drive exceeded expectations, collecting over 500 kits of basic necessities. Team is preparing for dispatch tomorrow at 6 AM.',
                                   'media': [],
                                 }),
                               ),
@@ -411,8 +426,10 @@ class _HomePageState extends State<HomePage> {
                             color: Colors.black.withOpacity(0.05),
                           ),
                         ),
-                        child: (_selectedHistoryItem != null 
-                                ? (_selectedHistoryItem!['media'] as List).isEmpty 
+                        child:
+                            (_selectedHistoryItem != null
+                                ? (_selectedHistoryItem!['media'] as List)
+                                      .isEmpty
                                 : _mediaFiles.isEmpty)
                             ? const Center(
                                 child: Column(
@@ -438,12 +455,13 @@ class _HomePageState extends State<HomePage> {
                                   horizontal: 16,
                                   vertical: 16,
                                 ),
-                                itemCount: _selectedHistoryItem != null 
-                                    ? (_selectedHistoryItem!['media'] as List).length 
+                                itemCount: _selectedHistoryItem != null
+                                    ? (_selectedHistoryItem!['media'] as List)
+                                          .length
                                     : _mediaFiles.length,
                                 itemBuilder: (context, index) {
-                                  final media = _selectedHistoryItem != null 
-                                      ? _selectedHistoryItem!['media'][index] 
+                                  final media = _selectedHistoryItem != null
+                                      ? _selectedHistoryItem!['media'][index]
                                       : _mediaFiles[index];
                                   return Padding(
                                     padding: const EdgeInsets.only(right: 12),
@@ -481,8 +499,8 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    _selectedHistoryItem != null 
-                                        ? _selectedHistoryItem!['transcription'] 
+                                    _selectedHistoryItem != null
+                                        ? _selectedHistoryItem!['transcription']
                                         : "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
@@ -526,6 +544,7 @@ class _HomePageState extends State<HomePage> {
     ); // Closes Scaffold
   }
 
+  //ok
   void _confirmDelete(Map<String, dynamic> media) {
     showDialog(
       context: context,

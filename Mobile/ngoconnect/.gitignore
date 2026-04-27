@@ -87,3 +87,6 @@ migrate_working_dir/
 
 # COVERAGE reports
 coverage/
+
+# Environment Variables
+.env
