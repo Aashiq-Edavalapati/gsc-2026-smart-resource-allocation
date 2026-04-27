@@ -9,13 +9,14 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { firebaseAuth } from '../../firebase.config';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private auth: Auth = firebaseAuth;
-  private apiUrl = 'http://localhost:5000/api/v1/users';
+  private apiUrl = `${environment.apiUrl}/users`;
 
   authUser = signal<any>(null);
   isLoggedIn = signal(false);

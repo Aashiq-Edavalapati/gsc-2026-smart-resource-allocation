@@ -96,14 +96,12 @@ class AuthService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
         },
-        body: jsonEncode({
-          'name': user.displayName ?? 'New User',
-          'email': user.email,
-        }),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        debugPrint('Backend Sync Failed: ${response.body}');
+        debugPrint('Backend Sync Failed: ${response.statusCode} - ${response.body}');
+      } else {
+        debugPrint('Backend Sync Success: ${response.body}');
       }
     } catch (e) {
       debugPrint('Error syncing with backend: $e');
@@ -129,7 +127,10 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
+        debugPrint('Profile Fetch Success: ${response.body}');
         return jsonDecode(response.body)['data'];
+      } else {
+        debugPrint('Profile Fetch Failed: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       debugPrint('Error fetching user profile: $e');

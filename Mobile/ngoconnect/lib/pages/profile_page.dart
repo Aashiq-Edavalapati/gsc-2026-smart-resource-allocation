@@ -4,6 +4,7 @@ import '../components/profile/profile_header.dart';
 import '../components/profile/premium_card.dart';
 import '../components/profile/profile_menu.dart';
 import '../services/auth_service.dart';
+import '../main.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -54,7 +55,7 @@ class ProfilePage extends StatelessWidget {
                     ProfileMenu(
                       sectionTitle: "ACCOUNT",
                       items: [
-                        _LogoutMenuItem(authService),
+                        _LogoutMenuItem(authService, context),
                       ],
                     ),
                   ],
@@ -69,10 +70,19 @@ class ProfilePage extends StatelessWidget {
 }
 
 class _LogoutMenuItem extends ProfileMenuItem {
-  _LogoutMenuItem(AuthService authService) 
+  _LogoutMenuItem(AuthService authService, BuildContext context) 
     : super(
         Icons.logout_rounded, 
         "Logout", 
-        onTap: () => authService.signOut()
+        onTap: () async {
+          await authService.signOut();
+          if (context.mounted) {
+            // Clear navigation stack and go back to root (AuthWrapper)
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AuthWrapper()),
+              (route) => false,
+            );
+          }
+        }
       );
 }
