@@ -41,7 +41,11 @@ export const inviteMember = async (req, res) => {
   try {
     const { email, role } = req.body;
     const invite = await orgService.inviteUserToOrg(req.params.id, email, role);
-    res.status(201).json({ success: true, data: invite });
+    res.status(201).json({
+      success: true,
+      message: "Invite created and email sent",
+      data: invite
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
