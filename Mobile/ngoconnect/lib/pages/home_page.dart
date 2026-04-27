@@ -15,6 +15,7 @@ import '../components/recording/media_preview_player.dart';
 import '../components/recording/media_thumbnail.dart';
 import '../components/recording/recording_action_sheet.dart';
 import './profile_page.dart';
+import './issues/issues_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -170,14 +171,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onNavItemSelected(int index) {
-    if (index == 3) {
+    if (index == 2) {
+      // Issues page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const IssuesPage()),
+      ).then((_) {
+        setState(() {
+          _currentNavIndex = 0;
+        });
+      });
+    } else if (index == 3) {
       // Profile page
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfilePage()),
       ).then((_) {
-        // When coming back, reset the nav index to Home (0)
-        // to maintain the "Home" state on the main page.
         setState(() {
           _currentNavIndex = 0;
         });
