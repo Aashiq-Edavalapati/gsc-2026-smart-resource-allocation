@@ -18,6 +18,7 @@ app.set("trust proxy", 1);
  * CORS configuration (dynamic and environment-safe)
  */
 const allowedOrigins = [
+  "*",
   "http://localhost:4200",
   process.env.CLIENT_URL
 ];

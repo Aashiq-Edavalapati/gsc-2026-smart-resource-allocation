@@ -87,3 +87,8 @@ migrate_working_dir/
 
 # COVERAGE reports
 coverage/
+
+# Environment Variables
+.env
+google-services.json
+GoogleService-Info.plist
