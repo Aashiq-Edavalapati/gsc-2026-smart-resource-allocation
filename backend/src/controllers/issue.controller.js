@@ -370,3 +370,94 @@ export const deleteMedia = async (req, res) => {
   await issueService.deleteMedia(req.params.mediaId);
   res.json({ success: true });
 };
+
+// ---------- APPROVAL ----------
+export const getSuggestedIssues = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+
+    // Verify user is an admin/owner of this organization
+    const membership = await issueService.verifyOrgRole(req.user.id, orgId);
+    if (!membership) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must be an ADMIN or OWNER of this organization'
+      });
+    }
+
+    const issues = await issueService.getSuggestedIssues(orgId);
+    res.json({ success: true, data: issues });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+export const approveIssue = async (req, res) => {
+  try {
+    const { issueId } = req.params;
+    const { orgId } = req.body;
+
+    // Get the issue
+    const issue = await issueService.getIssueById(issueId);
+    if (!issue) {
+      return res.status(404).json({ success: false, error: 'Issue not found' });
+    }
+
+    // Verify user is an admin/owner of the issue's organization
+    const membership = await prisma.organizationMember.findFirst({
+      where: {
+        userId: req.user.id,
+        organizationId: orgId || issue.ownerOrgId,
+        baseRole: { in: ['ADMIN', 'OWNER'] },
+        status: 'ACTIVE'
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must be an ADMIN or OWNER of this organization'
+      });
+    }
+
+    const approved = await issueService.approveIssue(issueId, membership.id);
+    res.json({ success: true, data: approved, message: 'Issue approved successfully' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+export const rejectIssue = async (req, res) => {
+  try {
+    const { issueId } = req.params;
+    const { orgId } = req.body;
+
+    // Get the issue
+    const issue = await issueService.getIssueById(issueId);
+    if (!issue) {
+      return res.status(404).json({ success: false, error: 'Issue not found' });
+    }
+
+    // Verify user is an admin/owner of the issue's organization
+    const membership = await prisma.organizationMember.findFirst({
+      where: {
+        userId: req.user.id,
+        organizationId: orgId || issue.ownerOrgId,
+        baseRole: { in: ['ADMIN', 'OWNER'] },
+        status: 'ACTIVE'
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({
+        success: false,
+        error: 'You must be an ADMIN or OWNER of this organization'
+      });
+    }
+
+    const rejected = await issueService.rejectIssue(issueId, membership.id);
+    res.json({ success: true, data: rejected, message: 'Issue rejected successfully' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
