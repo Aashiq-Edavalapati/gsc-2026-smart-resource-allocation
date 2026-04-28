@@ -2,13 +2,7 @@ import prisma from "../config/db.js";
 
 export const getPendingOrgs = async () => {
   return prisma.organization.findMany({
-    where: { verificationStatus: 'PENDING' },
-    select: {
-      id: true,
-      name: true,
-      documents: true,
-      registrationNumber: true
-    }
+    where: { verificationStatus: 'PENDING' }
   });
 };
 
@@ -53,4 +47,20 @@ export const getPlatformStats = async () => {
   ]);
 
   return { totalUsers, totalOrgs, totalIssues, resolvedIssues };
+};
+
+export const getAllUsers = async () => {
+  return prisma.user.findMany({
+    include: {
+      memberships: {
+        include: {
+          organization: true
+        }
+      }
+    }
+  });
+};
+
+export const getAllOrgs = async () => {
+  return prisma.organization.findMany();
 };

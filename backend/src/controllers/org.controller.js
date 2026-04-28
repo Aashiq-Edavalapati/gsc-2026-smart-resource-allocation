@@ -163,6 +163,10 @@ export const getOrgDashboard = async (req, res) => {
   }
 };
 
+export const getFieldReports = async (req, res) => {
+  try {
+    const reports = await orgService.getFieldReports(req.params.id);
+    res.json({ success: true, data: reports });
 export const getOrgCreatedResources = async (req, res) => {
   try {
     const data = await orgService.getOrgCreatedResources(req.params.id);

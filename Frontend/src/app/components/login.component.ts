@@ -153,7 +153,7 @@ export class LoginComponent {
         await this.authService.login(this.email, this.password);
       }
 
-      this.router.navigate(['/dashboard']);
+      await this.navigateAfterLogin();
     } catch (err: any) {
       this.error.set(err || 'Authentication failed');
     } finally {
@@ -168,12 +168,30 @@ export class LoginComponent {
       this.error.set('');
       
       await this.authService.loginWithGoogle();
-      this.router.navigate(['/dashboard']);
+      await this.navigateAfterLogin();
     } catch (err: any) {
       this.error.set(err || 'Google sign-in failed');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async navigateAfterLogin() {
+    const profile = this.authService.getCurrentProfile() || await this.authService.refreshCurrentProfile();
+
+    if (profile?.role === 'PLATFORM_ADMIN') {
+      await this.router.navigate(['/admin/dashboard']);
+      return;
+    }
+
+    if (profile?.memberships && profile.memberships.length > 0) {
+      // Redirect to the first organization's dashboard
+      const orgId = profile.memberships[0].organizationId;
+      await this.router.navigate(['/organizations', orgId, 'dashboard']);
+      return;
+    }
+
+    await this.router.navigate(['/dashboard']);
   }
 }
 

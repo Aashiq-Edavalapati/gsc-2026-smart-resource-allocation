@@ -52,7 +52,14 @@ export const syncUserService = async (token) => {
 export const getMeService = async (userId) => {
   return prisma.user.findUnique({
     where: { id: userId },
-    include: { volunteerProfile: true }
+    include: { 
+      volunteerProfile: true,
+      memberships: {
+        include: {
+          organization: true
+        }
+      }
+    }
   });
 };
 

@@ -48,7 +48,7 @@ router.patch('/assignments/:id', taskController.updateAssignment);
 router.get('/volunteers/assignments', taskController.getMyAssignments);
 
 // ---------- APPROVAL (ORG ADMIN ONLY) ----------
-router.get('/organization/:orgId/suggested', requireOrgRole(['OWNER', 'ADMIN']), taskController.getSuggestedTasks);
+router.get('/organization/:orgId/suggested', requireOrgRole(['OWNER', 'ADMIN', 'MEMBER']), taskController.getSuggestedTasks);
 router.post('/:taskId/approve', requireOrgRole(['OWNER', 'ADMIN']), taskController.approveTask);
 router.post('/:taskId/reject', requireOrgRole(['OWNER', 'ADMIN']), taskController.rejectTask);
 

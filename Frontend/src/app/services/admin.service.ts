@@ -11,6 +11,7 @@ export class AdminService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private baseUrl = `${environment.apiUrl}/admin`;
+  private organizationsUrl = `${environment.apiUrl}/organizations`;
 
   private async getHeaders(): Promise<HttpHeaders> {
     const user = this.authService.getCurrentUser();
@@ -32,11 +33,28 @@ export class AdminService {
     return response.data;
   }
 
+  async getOrganization(id: string) {
+    const response = await firstValueFrom(this.http.get<any>(`${this.organizationsUrl}/${id}`));
+    return response.data;
+  }
+
   async addContactToOrganization(id: string, email: string) {
     const headers = await this.getHeaders();
     const response = await firstValueFrom(
       this.http.post<any>(`${this.baseUrl}/organizations/${id}/add-contact`, { email }, { headers })
     );
+    return response.data;
+  }
+
+  async getUsers() {
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/users`, { headers }));
+    return response.data;
+  }
+
+  async getOrganizations() {
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/organizations`, { headers }));
     return response.data;
   }
 }
