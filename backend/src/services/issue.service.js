@@ -1,7 +1,55 @@
 import prisma from '../config/db.js';
-import { setIssueLocation } from '../lib/geo.js';
 import { classifyIssue } from './ai.service.js';
 import { notifyNearestNGO } from './notification.service.js';
+import { randomUUID } from 'crypto';
+
+const createIssueRecord = async (tx, data, userId, latitude, longitude) => {
+  const issueId = data.id || randomUUID();
+
+  const insertedRows = await tx.$queryRaw`
+    INSERT INTO "Issue" (
+      id,
+      title,
+      description,
+      category,
+      urgency,
+      city,
+      "reporterUserId",
+      "ownerOrgId",
+      "fieldReportId",
+      location
+    ) VALUES (
+      ${issueId},
+      ${data.title},
+      ${data.description},
+      ${data.category},
+      ${Math.max(1, parseInt(data.urgency) || 3)},
+      ${data.city},
+      ${userId},
+      ${data.ownerOrgId || null},
+      ${data.fieldReportId || null},
+      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+    )
+    RETURNING id
+  `;
+
+  const returnedIssueId = insertedRows?.[0]?.id || issueId;
+
+  if (!returnedIssueId) {
+    throw new Error('Failed to create issue record');
+  }
+
+  const issue = await tx.issue.update({
+    where: { id: returnedIssueId },
+    data: {
+      source: data.source || 'USER',
+      verification: data.verification || 'UNVERIFIED',
+      approvalStatus: data.approvalStatus || 'SUGGESTED'
+    }
+  });
+
+  return issue;
+};
 
 // ---------- CREATE ----------
 export const verifyOrgRole = async (userId, orgId) => {
@@ -20,30 +68,104 @@ export const verifyOrgRole = async (userId, orgId) => {
 
 export const createIssue = async (userId, data) => {
   const issue = await prisma.$transaction(async (tx) => {
-    // Create the issue without location (Prisma can't handle PostGIS type)
-    const newIssue = await tx.issue.create({
-      data: {
+    return createIssueRecord(
+      tx,
+      {
         title: data.title,
         description: data.description,
         category: data.category,
         urgency: parseInt(data.urgency),
         city: data.city,
-        reporterUserId: userId,
         ownerOrgId: data.ownerOrgId || null,
-        tags: data.tags || [],
-        isPublic: data.isPublic !== false, // default true
-        status: 'OPEN',
-        verification: 'UNVERIFIED'
-      }
-    });
-
-    return newIssue;
+        fieldReportId: data.fieldReportId || null,
+        source: data.source || 'USER',
+        verification: 'UNVERIFIED',
+        approvalStatus: data.approvalStatus || 'SUGGESTED'
+      },
+      userId,
+      parseFloat(data.lat),
+      parseFloat(data.lng)
+    );
   });
 
-  await setIssueLocation(issue.id, parseFloat(data.lat), parseFloat(data.lng));
   await notifyNearestNGO(parseFloat(data.lat), parseFloat(data.lng), issue);
 
   return issue;
+};
+
+// Create issues and tasks from AI extraction with SUGGESTED status
+export const createIssuesAndTasksFromAI = async (userId, aiData, fieldReportData) => {
+  const { lat, lng, city, organizationId, fieldReportId } = fieldReportData;
+  const issues = aiData.issues || [];
+
+  const createdIssues = [];
+
+  for (const issueData of issues) {
+    try {
+      const issue = await prisma.$transaction(async (tx) => {
+        const newIssue = await createIssueRecord(
+          tx,
+          {
+            title: issueData.title,
+            description: issueData.description,
+            category: issueData.category,
+            urgency: Math.max(1, Math.min(5, parseInt(issueData.urgency) || 3)),
+            city,
+            ownerOrgId: organizationId || null,
+            fieldReportId: fieldReportId || null,
+            source: 'FIELD_REPORT',
+            verification: 'AI_VERIFIED',
+            approvalStatus: 'SUGGESTED'
+          },
+          userId,
+          parseFloat(lat),
+          parseFloat(lng)
+        );
+
+        // Create tasks for this issue
+        if (issueData.tasks && Array.isArray(issueData.tasks)) {
+          const createdTasks = [];
+          for (const taskData of issueData.tasks) {
+            try {
+              const createdTask = await tx.task.create({
+                data: {
+                  issueId: newIssue.id,
+                  title: taskData.title,
+                  description: taskData.description || '',
+                  category: taskData.category || issueData.category || 'OTHER',
+                  requiredSkills: taskData.requiredSkills || [],
+                  volunteersNeeded: Math.max(1, parseInt(taskData.volunteersNeeded) || 1),
+                  status: 'OPEN',
+                  approvalStatus: 'SUGGESTED'
+                }
+              });
+
+              createdTasks.push(createdTask);
+            } catch (taskErr) {
+              console.error('Error creating task:', taskErr);
+            }
+          }
+
+          return {
+            ...newIssue,
+            tasks: createdTasks
+          };
+        }
+
+        return {
+          ...newIssue,
+          tasks: []
+        };
+      });
+
+      // Set location for the issue
+      createdIssues.push(issue);
+    } catch (issueErr) {
+      console.error('Error creating issue from AI data:', issueErr);
+    }
+  }
+
+  return createdIssues;
 };
 
 // ---------- READ ----------
@@ -307,6 +429,53 @@ export const deleteComment = async (id, userId) => {
 export const addMedia = (issueId, data) => {
   return prisma.issueMedia.create({
     data: { issueId, ...data }
+  });
+};
+
+// ---------- APPROVAL ----------
+export const approveIssue = async (issueId, membershipId) => {
+  const issue = await prisma.issue.findUnique({ where: { id: issueId } });
+  if (!issue) throw new Error('Issue not found');
+
+  return prisma.issue.update({
+    where: { id: issueId },
+    data: {
+      approvalStatus: 'APPROVED',
+      approvedByMembershipId: membershipId
+    }
+  });
+};
+
+export const rejectIssue = async (issueId, membershipId) => {
+  const issue = await prisma.issue.findUnique({ where: { id: issueId } });
+  if (!issue) throw new Error('Issue not found');
+
+  return prisma.issue.update({
+    where: { id: issueId },
+    data: {
+      approvalStatus: 'REJECTED',
+      approvedByMembershipId: membershipId
+    }
+  });
+};
+
+export const getSuggestedIssues = async (orgId) => {
+  return prisma.issue.findMany({
+    where: {
+      ownerOrgId: orgId,
+      approvalStatus: 'SUGGESTED'
+    },
+    include: {
+      tasks: {
+        where: {
+          approvalStatus: 'SUGGESTED'
+        }
+      },
+      _count: {
+        select: { tasks: true, comments: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
   });
 };
 

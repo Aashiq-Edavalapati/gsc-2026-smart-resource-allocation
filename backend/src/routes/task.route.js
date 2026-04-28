@@ -47,4 +47,9 @@ router.patch('/assignments/:id', taskController.updateAssignment);
 // ---------- VOLUNTEER DASHBOARD ----------
 router.get('/volunteers/assignments', taskController.getMyAssignments);
 
+// ---------- APPROVAL (ORG ADMIN ONLY) ----------
+router.get('/organization/:orgId/suggested', requireOrgRole(['OWNER', 'ADMIN']), taskController.getSuggestedTasks);
+router.post('/:taskId/approve', requireOrgRole(['OWNER', 'ADMIN']), taskController.approveTask);
+router.post('/:taskId/reject', requireOrgRole(['OWNER', 'ADMIN']), taskController.rejectTask);
+
 export default router;

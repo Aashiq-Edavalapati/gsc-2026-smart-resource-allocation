@@ -9,6 +9,7 @@ export const createTask = async (issueId, membershipId, data) => {
       issueId,
       title: data.title,
       description: data.description,
+      category: data.category || 'OTHER',
       requiredSkills: data.requiredSkills || [],
       volunteersNeeded: data.volunteersNeeded,
       createdByMembershipId: membershipId
@@ -82,7 +83,16 @@ export const getRecommendedVolunteers = async (taskId) => {
         distanceScore = Math.max(0, 10 - km / 2);
       }
 
-      const score = skillMatch * 5 + distanceScore * 3 + v.trustScore * 0.2;
+      // Category-based scoring: check if task category matches volunteer expertise
+      let categoryScore = 0;
+      if (task.category && v.skills.some(skill => 
+        skill.toLowerCase().includes(task.category.toLowerCase()) || 
+        task.category.toLowerCase().includes(skill.toLowerCase())
+      )) {
+        categoryScore = 3; // Bonus for category match
+      }
+
+      const score = skillMatch * 5 + distanceScore * 3 + v.trustScore * 0.2 + categoryScore;
       return { volunteer: v, score };
     })
     .filter(({ score }) => score > 0)
@@ -260,4 +270,49 @@ const matchAndNotifyVolunteers = async (task) => {
       { type: 'TASK_CREATED', taskId: task.id }
     );
   }
-};
+};
+
+// ---------- APPROVAL ----------
+export const approveTask = async (taskId, membershipId) => {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new Error('Task not found');
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: {
+      approvalStatus: 'APPROVED',
+      approvedByMembershipId: membershipId
+    }
+  });
+};
+
+export const rejectTask = async (taskId, membershipId) => {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new Error('Task not found');
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: {
+      approvalStatus: 'REJECTED',
+      approvedByMembershipId: membershipId
+    }
+  });
+};
+
+export const getSuggestedTasks = async (orgId) => {
+  return prisma.task.findMany({
+    where: {
+      issue: { ownerOrgId: orgId },
+      approvalStatus: 'SUGGESTED'
+    },
+    include: {
+      issue: {
+        select: { id: true, title: true, category: true }
+      },
+      _count: {
+        select: { assignments: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+};
