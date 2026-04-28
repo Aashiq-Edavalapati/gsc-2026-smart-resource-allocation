@@ -130,3 +130,58 @@ export const deleteMyAccountService = async (userId) => {
     data: { deletedAt: new Date() }
   });
 };
+
+export const getMyCreatedResourcesService = async (userId) => {
+  const [fieldReports, issues, tasks] = await Promise.all([
+    prisma.fieldReport.findMany({
+      where: { createdByUserId: userId },
+      include: {
+        media: true,
+        issues: {
+          include: {
+            tasks: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.issue.findMany({
+      where: { reporterUserId: userId },
+      include: {
+        tasks: true,
+        ownerOrg: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.task.findMany({
+      where: {
+        OR: [
+          { createdByMembership: { userId } },
+          { issue: { reporterUserId: userId } }
+        ]
+      },
+      include: {
+        issue: {
+          select: {
+            id: true,
+            title: true,
+            ownerOrgId: true,
+            reporterUserId: true
+          }
+        },
+        createdByMembership: {
+          select: {
+            id: true,
+            userId: true,
+            organizationId: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
+
+  return { fieldReports, issues, tasks };
+};

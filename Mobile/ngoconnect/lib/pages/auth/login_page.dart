@@ -147,8 +147,17 @@ class _LoginPageState extends State<LoginPage> {
                 height: 60,
                 child: OutlinedButton.icon(
                   onPressed: _isLoading ? null : _loginWithGoogle,
-                  icon: Image.network('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png', height: 24),
-                  label: const Text("SIGN IN WITH GOOGLE", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                  icon: Image.network(
+                    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png',
+                    height: 24,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.account_circle_outlined, color: Colors.black54, size: 24);
+                    },
+                  ),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text("SIGN IN WITH GOOGLE", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

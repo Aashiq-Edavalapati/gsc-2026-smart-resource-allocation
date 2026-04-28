@@ -95,7 +95,7 @@ export const createIssue = async (userId, data) => {
 
 // Create issues and tasks from AI extraction with SUGGESTED status
 export const createIssuesAndTasksFromAI = async (userId, aiData, fieldReportData) => {
-  const { lat, lng, city, organizationId, fieldReportId } = fieldReportData;
+  const { lat, lng, city, organizationId, fieldReportId, creatorMembershipId } = fieldReportData;
   const issues = aiData.issues || [];
 
   const createdIssues = [];
@@ -136,7 +136,8 @@ export const createIssuesAndTasksFromAI = async (userId, aiData, fieldReportData
                   requiredSkills: taskData.requiredSkills || [],
                   volunteersNeeded: Math.max(1, parseInt(taskData.volunteersNeeded) || 1),
                   status: 'OPEN',
-                  approvalStatus: 'SUGGESTED'
+                  approvalStatus: 'SUGGESTED',
+                  createdByMembershipId: creatorMembershipId || null
                 }
               });
 
