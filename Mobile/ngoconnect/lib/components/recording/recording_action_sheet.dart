@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class RecordingActionSheet extends StatelessWidget {
+class RecordingActionSheet extends StatefulWidget {
   final bool isRecordingAudio;
   final int recordingSeconds;
   final List<double> amplitudes;
@@ -10,6 +10,7 @@ class RecordingActionSheet extends StatelessWidget {
   final bool isViewingHistory;
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
+  final TextEditingController titleController;
 
   const RecordingActionSheet({
     super.key,
@@ -22,7 +23,15 @@ class RecordingActionSheet extends StatelessWidget {
     required this.isViewingHistory,
     required this.onSubmit,
     required this.onCancel,
+    required this.titleController,
   });
+
+  @override
+  State<RecordingActionSheet> createState() => _RecordingActionSheetState();
+}
+
+class _RecordingActionSheetState extends State<RecordingActionSheet> {
+  bool _isEditingTitle = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +49,7 @@ class RecordingActionSheet extends StatelessWidget {
           ),
         ),
 
-        if (isRecordingAudio && !isViewingHistory)
+        if (widget.isRecordingAudio && !widget.isViewingHistory)
           Container(
             height: 40,
             width: double.infinity,
@@ -49,7 +58,7 @@ class RecordingActionSheet extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  '${(recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(recordingSeconds % 60).toString().padLeft(2, '0')}',
+                  '${(widget.recordingSeconds ~/ 60).toString().padLeft(2, '0')}:${(widget.recordingSeconds % 60).toString().padLeft(2, '0')}',
                   style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(width: 16),
@@ -57,7 +66,7 @@ class RecordingActionSheet extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    children: amplitudes.map((amp) {
+                    children: widget.amplitudes.map((amp) {
                       double height = ((amp + 50) / 50 * 35);
                       if (height < 5) height = 5;
                       if (height > 35) height = 35;
@@ -78,7 +87,8 @@ class RecordingActionSheet extends StatelessWidget {
             ),
           ),
 
-        if (!isViewingHistory)
+
+        if (!widget.isViewingHistory)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -88,22 +98,22 @@ class RecordingActionSheet extends StatelessWidget {
                   child: _buildActionButton(
                     icon: Icons.videocam_outlined,
                     label: "Video",
-                    onTap: onRecordVideo,
+                    onTap: widget.onRecordVideo,
                   ),
                 ),
                 Expanded(
                   child: _buildActionButton(
-                    icon: isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
-                    label: isRecordingAudio ? "Stop" : "Voice",
-                    iconColor: isRecordingAudio ? Colors.red : Colors.white,
-                    onTap: onToggleAudioRecording,
+                    icon: widget.isRecordingAudio ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
+                    label: widget.isRecordingAudio ? "Stop" : "Voice",
+                    iconColor: widget.isRecordingAudio ? Colors.red : Colors.white,
+                    onTap: widget.onToggleAudioRecording,
                   ),
                 ),
                 Expanded(
                   child: _buildActionButton(
                     icon: Icons.camera_alt_outlined,
                     label: "Photo",
-                    onTap: onTakePhoto,
+                    onTap: widget.onTakePhoto,
                   ),
                 ),
               ],
@@ -119,7 +129,7 @@ class RecordingActionSheet extends StatelessWidget {
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: onSubmit,
+              onPressed: widget.onSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF68417E),
@@ -129,7 +139,7 @@ class RecordingActionSheet extends StatelessWidget {
                 ),
               ),
               child: Text(
-                isViewingHistory ? "Update Recording" : "Submit for Review",
+                widget.isViewingHistory ? "Update Recording" : "Submit for Review",
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -145,7 +155,7 @@ class RecordingActionSheet extends StatelessWidget {
             width: double.infinity,
             height: 55,
             child: OutlinedButton(
-              onPressed: onCancel,
+              onPressed: widget.onCancel,
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: const BorderSide(color: Colors.white24),

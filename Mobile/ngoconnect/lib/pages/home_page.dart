@@ -17,6 +17,8 @@ import '../components/recording/recording_action_sheet.dart';
 import './profile_page.dart';
 import './issues/issues_page.dart';
 import './tasks/tasks_page.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import '../services/field_report_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,6 +35,35 @@ class _HomePageState extends State<HomePage> {
   final ImagePicker _picker = ImagePicker();
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecordingAudio = false;
+
+  final FieldReportService _fieldReportService = FieldReportService();
+  List<dynamic> _backendIssues = [];
+  bool _isLoadingIssues = false;
+  bool _isSubmittingReport = false;
+
+  final TextEditingController _notesController = TextEditingController(text: "");
+  final TextEditingController _titleController = TextEditingController(text: "New Field Report");
+  bool _isEditingNotes = false;
+  bool _isEditingTitle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchIssues();
+  }
+
+  Future<void> _fetchIssues() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingIssues = true;
+    });
+    final issues = await _fieldReportService.getIssues();
+    if (!mounted) return;
+    setState(() {
+      _backendIssues = issues;
+      _isLoadingIssues = false;
+    });
+  }
 
   List<Map<String, dynamic>> _mediaFiles = [];
   Map<String, dynamic>? _selectedHistoryItem;
@@ -228,7 +259,10 @@ class _HomePageState extends State<HomePage> {
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 250),
           opacity: _isRecordingMode ? 0.0 : 1.0,
-          child: const MainTitleBar(),
+          child: IgnorePointer(
+            ignoring: _isRecordingMode,
+            child: const MainTitleBar(),
+          ),
         ),
       ),
       body: SizedBox.expand(
@@ -272,58 +306,55 @@ class _HomePageState extends State<HomePage> {
                             shrinkWrap: true,
                             // Removed bottom padding from here so Container shrinks correctly
                             padding: const EdgeInsets.only(top: 8, bottom: 8),
-                            children: [
-                              HistoryCard(
-                                title: "Community Outreach",
-                                duration: "04:20",
-                                photoCount: 3,
-                                videoCount: 1,
-                                onViewTap: () => _openHistoryItem({
-                                  'title': 'Community Outreach',
-                                  'transcription':
-                                      'The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies.',
-                                  'media': [
-                                    {
-                                      'type': 'photo',
-                                      'path':
-                                          'https://plus.unsplash.com/premium_photo-1683121366410-d8120fc35b81?q=80&w=2940&auto=format&fit=crop',
-                                    },
-                                    {
-                                      'type': 'photo',
-                                      'path':
-                                          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=2813&auto=format&fit=crop',
-                                    },
-                                    {
-                                      'type': 'video',
-                                      'path': 'invalid',
-                                      'thumbnail': null,
-                                    },
-                                  ],
-                                }),
-                              ),
-                              HistoryCard(
-                                title: "Resource Allocation",
-                                duration: "10:15",
-                                photoCount: 5,
-                                onViewTap: () => _openHistoryItem({
-                                  'title': 'Resource Allocation',
-                                  'transcription':
-                                      'Analysis of the strategic reserves reveals a need for immediate replenishment of potable water and non-perishable food items in the northern sector.',
-                                  'media': [],
-                                }),
-                              ),
-                              HistoryCard(
-                                title: "Donation Drive",
-                                duration: "02:45",
-                                videoCount: 2,
-                                onViewTap: () => _openHistoryItem({
-                                  'title': 'Donation Drive',
-                                  'transcription':
-                                      'The donation drive exceeded expectations, collecting over 500 kits of basic necessities. Team is preparing for dispatch tomorrow at 6 AM.',
-                                  'media': [],
-                                }),
-                              ),
-                            ],
+                            children: _isLoadingIssues
+                                ? [
+                                    const Padding(
+                                      padding: EdgeInsets.all(20.0),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF68417E),
+                                        ),
+                                      ),
+                                    )
+                                  ]
+                                : _backendIssues.isEmpty
+                                    ? [
+                                        const Padding(
+                                          padding: EdgeInsets.all(20.0),
+                                          child: Center(
+                                            child: Text(
+                                              "No recordings processed yet.",
+                                              style: TextStyle(color: Colors.black54),
+                                            ),
+                                          ),
+                                        )
+                                      ]
+                                    : _backendIssues.map((issue) {
+                                        int photoCount = 0;
+                                        int videoCount = 0;
+                                        if (issue['media'] != null) {
+                                          for (var m in issue['media']) {
+                                            if (m['type'] == 'IMAGE') photoCount++;
+                                            if (m['type'] == 'VIDEO') videoCount++;
+                                          }
+                                        }
+                                        return HistoryCard(
+                                          title: issue['title'] ?? 'Untitled Issue',
+                                          duration: issue['category'] ?? 'General',
+                                          photoCount: photoCount,
+                                          videoCount: videoCount,
+                                          onViewTap: () => _openHistoryItem({
+                                            'title': issue['title'] ?? 'Untitled Issue',
+                                            'transcription': issue['description'] ?? 'No description',
+                                            'media': issue['media'] != null 
+                                                ? (issue['media'] as List).map((m) => {
+                                                    'type': m['type'] == 'IMAGE' ? 'photo' : 'video',
+                                                    'path': m['url']
+                                                  }).toList()
+                                                : [],
+                                          }),
+                                        );
+                                      }).toList(),
                           ),
                         ),
                       ),
@@ -382,9 +413,87 @@ class _HomePageState extends State<HomePage> {
                               onToggleAudioRecording: _toggleAudioRecording,
                               onTakePhoto: _takePhoto,
                               isViewingHistory: _selectedHistoryItem != null,
-                              onSubmit: () {
-                                // TODO: Submit review logic
-                              },
+                              titleController: _titleController,
+                              onSubmit: () async {
+                                if (_isSubmittingReport) return;
+                                setState(() {
+                                  _isSubmittingReport = true;
+                                });
+                                      
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (BuildContext context) {
+                                          return const Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  CircularProgressIndicator(color: Colors.white),
+                                                  SizedBox(height: 16),
+                                                  Text(
+                                                    "Processing Field Report...",
+                                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+
+                                      try {
+                                        final fb_auth.User? user = fb_auth.FirebaseAuth.instance.currentUser;
+                                        final String? idToken = await user?.getIdToken();
+
+                                        final result = await _fieldReportService.processFieldReport(
+                                          idToken: idToken,
+                                          mediaFiles: _mediaFiles,
+                                          lat: 12.9716,
+                                          lng: 77.5946,
+                                          city: "Bangalore",
+                                          description: _titleController.text.isNotEmpty ? _titleController.text : "Report from NGO Connect Mobile app",
+                                          text: _notesController.text,
+                                        );
+
+                                        Navigator.pop(context); // Dismiss loader
+
+                                        if (result != null && result['success'] == true) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(result['message'] ?? 'Report processed successfully!'),
+                                              backgroundColor: const Color(0xFF68417E),
+                                            ),
+                                          );
+
+                                          setState(() {
+                                            _mediaFiles.clear();
+                                          });
+                                          _toggleRecordingMode();
+                                          _fetchIssues();
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Failed to process field report.'),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      } finally {
+                                        setState(() {
+                                          _isSubmittingReport = false;
+                                        });
+                                      }
+                                    },
                               onCancel: _toggleRecordingMode,
                             )
                           : _buildClosedButtonUI(context),
@@ -429,12 +538,71 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.white,
                   child: Column(
                     children: [
-                      // 1. Thumbnail Area (Top) with top margin for safe area
+                      const SizedBox(height: 60),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _isEditingTitle
+                                  ? TextField(
+                                      controller: _titleController,
+                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                      decoration: const InputDecoration(
+                                        hintText: "Enter report title...",
+                                        border: InputBorder.none,
+                                      ),
+                                      autofocus: true,
+                                      onSubmitted: (_) {
+                                        setState(() {
+                                          _isEditingTitle = false;
+                                        });
+                                      },
+                                    )
+                                  : GestureDetector(
+                                      onTap: () {
+                                        if (_selectedHistoryItem == null) {
+                                          setState(() {
+                                            _isEditingTitle = true;
+                                          });
+                                        }
+                                      },
+                                      child: Text(
+                                        _selectedHistoryItem != null
+                                            ? _selectedHistoryItem!['title']
+                                            : (_titleController.text.isEmpty ? "New Field Report" : _titleController.text),
+                                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                      ),
+                                    ),
+                            ),
+                            if (_selectedHistoryItem == null)
+                              IconButton(
+                                icon: Icon(
+                                  _isEditingTitle ? Icons.check_circle_outline : Icons.edit_note_rounded,
+                                  color: const Color(0XFF596939),
+                                  size: 28,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isEditingTitle = !_isEditingTitle;
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      // 1. Thumbnail Area (Top)
                       Container(
                         height: size.height * 0.25,
                         width: double.infinity,
                         margin: const EdgeInsets.only(
-                          top: 60,
+                          top: 10,
                           left: 20,
                           right: 20,
                           bottom: 20,
@@ -506,28 +674,65 @@ class _HomePageState extends State<HomePage> {
                               child: ListView(
                                 padding: const EdgeInsets.only(bottom: 60),
                                 children: [
-                                  Text(
-                                    "Transcription",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0XFF596939),
-                                          letterSpacing: 1.2,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Notes",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: const Color(0XFF596939),
+                                              letterSpacing: 1.2,
+                                            ),
+                                      ),
+                                      if (_selectedHistoryItem == null)
+                                        IconButton(
+                                          icon: Icon(
+                                            _isEditingNotes ? Icons.check_circle_outline : Icons.edit_note_rounded,
+                                            color: const Color(0XFF596939),
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _isEditingNotes = !_isEditingNotes;
+                                            });
+                                          },
                                         ),
+                                    ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Text(
-                                    _selectedHistoryItem != null
-                                        ? _selectedHistoryItem!['transcription']
-                                        : "The community outreach program successfully identified three new areas for resource allocation. Initial assessments show a high demand for educational materials and healthcare supplies. The local NGO representatives confirmed that the donation drive will begin early next week to address these needs...",
-                                    style: Theme.of(context).textTheme.bodyLarge
-                                        ?.copyWith(
-                                          height: 1.6,
-                                          color: Colors.black87,
+                                  _isEditingNotes
+                                      ? TextField(
+                                          controller: _notesController,
+                                          maxLines: null,
+                                          decoration: InputDecoration(
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                              borderSide: const BorderSide(color: Colors.black12),
+                                            ),
+                                            filled: true,
+                                            fillColor: Colors.black.withOpacity(0.02),
+                                            hintText: "Enter notes here...",
+                                            hintStyle: const TextStyle(color: Colors.black38),
+                                          ),
+                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            height: 1.6,
+                                            color: Colors.black87,
+                                          ),
+                                        )
+                                      : Text(
+                                          _selectedHistoryItem != null
+                                              ? _selectedHistoryItem!['transcription']
+                                              : (_notesController.text.isEmpty ? "Enter notes..." : _notesController.text),
+                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                height: 1.6,
+                                                color: _notesController.text.isEmpty ? Colors.black38 : Colors.black87,
+                                                fontStyle: _notesController.text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                                              ),
                                         ),
-                                  ),
                                 ],
                               ),
                             ),
