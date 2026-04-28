@@ -3,6 +3,7 @@ import path from "path"
 import angular from '@analogjs/vite-plugin-angular';
 
 export default defineConfig({
+  base: './',
   plugins: [angular()],
   resolve: {
     alias: {
