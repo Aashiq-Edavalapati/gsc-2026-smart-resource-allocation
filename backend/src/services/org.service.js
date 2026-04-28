@@ -337,3 +337,51 @@ export const getOrgDashboard = async (orgId) => {
 
   return { issues, tasks, members };
 };
+
+export const getOrgCreatedResources = async (organizationId) => {
+  const [fieldReports, issues, tasks] = await Promise.all([
+    prisma.fieldReport.findMany({
+      where: { organizationId },
+      include: {
+        createdByUser: {
+          select: { id: true, name: true, email: true }
+        },
+        media: true
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.issue.findMany({
+      where: { ownerOrgId: organizationId },
+      include: {
+        reporterUser: {
+          select: { id: true, name: true, email: true }
+        },
+        tasks: true
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.task.findMany({
+      where: {
+        issue: { ownerOrgId: organizationId }
+      },
+      include: {
+        issue: {
+          select: { id: true, title: true, ownerOrgId: true }
+        },
+        createdByMembership: {
+          select: {
+            id: true,
+            userId: true,
+            organizationId: true,
+            user: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
+
+  return { fieldReports, issues, tasks };
+};

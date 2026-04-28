@@ -30,6 +30,7 @@ export const buildFieldReportFingerprint = ({
   city,
   lat,
   lng,
+  title = '',
   description = '',
   contextText = '',
   mediaUrls = []
@@ -40,6 +41,7 @@ export const buildFieldReportFingerprint = ({
     city: (city || '').trim().toLowerCase(),
     lat: Number.parseFloat(lat).toFixed(6),
     lng: Number.parseFloat(lng).toFixed(6),
+    title: title.trim(),
     description: description.trim(),
     contextText: contextText.trim(),
     mediaUrls: [...new Set(mediaUrls.filter(Boolean))].sort()
@@ -97,7 +99,11 @@ export const prepareFieldReportProcessing = async (payload) => {
         aiProcessedAt: null,
         aiRawOutput: null,
         aiSummary: null,
-        title: payload.description?.trim() ? payload.description.trim().slice(0, 120) : existing.title || 'Field assessment'
+        title: payload.title?.trim()
+          ? payload.title.trim().slice(0, 120)
+          : payload.description?.trim()
+            ? payload.description.trim().slice(0, 120)
+            : existing.title || 'Field assessment'
       },
       include: includeFieldReportRelations
     });
@@ -115,7 +121,11 @@ export const prepareFieldReportProcessing = async (payload) => {
         createdByUserId: payload.userId,
         organizationId: payload.organizationId || null,
         requestFingerprint,
-        title: payload.description?.trim() ? payload.description.trim().slice(0, 120) : 'Field assessment',
+        title: payload.title?.trim()
+          ? payload.title.trim().slice(0, 120)
+          : payload.description?.trim()
+            ? payload.description.trim().slice(0, 120)
+            : 'Field assessment',
         description: payload.description || null,
         status: 'PROCESSING',
         pipelineStage: 'RECEIVED',
@@ -183,3 +193,4 @@ export const failFieldReportProcessing = async (fieldReportId, errorMessage) => 
     }
   });
 };
+
