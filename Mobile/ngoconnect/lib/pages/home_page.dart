@@ -464,15 +464,23 @@ class _HomePageState extends State<HomePage> {
                                         final fb_auth.User? user = fb_auth.FirebaseAuth.instance.currentUser;
                                         final String? idToken = await user?.getIdToken();
 
+                                        debugPrint('Triggering process-field-report-and-create-issues endpoint...');
+                                        debugPrint('Title: ${_titleController.text}');
+                                        debugPrint('Note/Text: ${_notesController.text}');
+                                        debugPrint('Media files count: ${_mediaFiles.length}');
+
                                         final result = await _fieldReportService.processFieldReport(
                                           idToken: idToken,
                                           mediaFiles: _mediaFiles,
                                           lat: 12.9716,
                                           lng: 77.5946,
                                           city: "Bangalore",
+                                          title: _titleController.text.isNotEmpty ? _titleController.text : "New Field Report",
                                           description: _titleController.text.isNotEmpty ? _titleController.text : "Report from NGO Connect Mobile app",
                                           text: _notesController.text,
                                         );
+
+                                        debugPrint('Process Field Report result: $result');
 
                                         Navigator.pop(context); // Dismiss loader
 

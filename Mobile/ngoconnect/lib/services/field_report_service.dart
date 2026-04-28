@@ -13,6 +13,7 @@ class FieldReportService {
     required double lat,
     required double lng,
     required String city,
+    String? title,
     String? description,
     String? text,
     String? organizationId,
@@ -29,6 +30,7 @@ class FieldReportService {
       request.fields['lat'] = lat.toString();
       request.fields['lng'] = lng.toString();
       request.fields['city'] = city;
+      if (title != null) request.fields['title'] = title;
       if (description != null) request.fields['description'] = description;
       if (text != null) request.fields['text'] = text;
       if (organizationId != null) request.fields['organizationId'] = organizationId;
@@ -51,8 +53,18 @@ class FieldReportService {
         request.files.add(multipartFile);
       }
 
+      debugPrint('--- Field Report Request Sent ---');
+      debugPrint('URL: $uri');
+      debugPrint('Headers: ${request.headers}');
+      debugPrint('Fields: ${request.fields}');
+      debugPrint('Files: ${request.files.map((f) => '${f.field}: ${f.filename}').toList()}');
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('--- Field Report Response Received ---');
+      debugPrint('Status: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
         return jsonDecode(response.body);
