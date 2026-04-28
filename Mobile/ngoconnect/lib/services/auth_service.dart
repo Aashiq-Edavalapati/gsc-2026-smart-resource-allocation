@@ -2,15 +2,18 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class AuthService {
+class AuthService with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
     serverClientId: dotenv.env['GOOGLE_SIGN_IN_SERVER_CLIENT_ID'],
   );
+
+  Map<String, dynamic>? _profileData;
+  Map<String, dynamic>? get profileData => _profileData;
 
   // Replace with your actual backend URL
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'https://backend-349232024775.asia-south1.run.app/api/v1';
@@ -96,14 +99,14 @@ class AuthService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
         },
-        body: jsonEncode({
-          'name': user.displayName ?? 'New User',
-          'email': user.email,
-        }),
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        debugPrint('Backend Sync Failed: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('Backend Sync Success: ${response.body}');
+        // Refresh local profile data after sync
+        await getUserProfile();
+      } else {
+        debugPrint('Backend Sync Failed: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       debugPrint('Error syncing with backend: $e');
@@ -114,6 +117,8 @@ class AuthService {
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
+    _profileData = null;
+    notifyListeners();
   }
 
   // Get User Profile from Backend
@@ -129,11 +134,85 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body)['data'];
+        debugPrint('Profile Fetch Success: ${response.body}');
+        _profileData = jsonDecode(response.body)['user'];
+        notifyListeners();
+        return _profileData;
+      } else {
+        debugPrint('Profile Fetch Failed: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       debugPrint('Error fetching user profile: $e');
     }
     return null;
+  }
+
+  // Update User Profile (PUT /users/me)
+  Future<bool> updateUserProfile({String? name, String? city, double? lat, double? lng}) async {
+    final user = currentUser;
+    if (user == null) return false;
+
+    try {
+      final idToken = await user.getIdToken();
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: jsonEncode({
+          if (name != null) 'name': name,
+          if (city != null) 'city': city,
+          if (lat != null) 'lat': lat,
+          if (lng != null) 'lng': lng,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Profile Update Success: ${response.body}');
+        // Update local state immediately
+        _profileData = jsonDecode(response.body)['user'];
+        notifyListeners();
+        return true;
+      } else {
+        debugPrint('Profile Update Failed: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+    }
+    return false;
+  }
+
+  // Update Volunteer Profile (POST /users/volunteer-profile)
+  Future<bool> updateVolunteerProfile(List<String> skills, String availability) async {
+    final user = currentUser;
+    if (user == null) return false;
+
+    try {
+      final idToken = await user.getIdToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/volunteer-profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: jsonEncode({
+          'skills': skills,
+          'availability': availability,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('Volunteer Profile Update Success: ${response.body}');
+        // Refresh full profile to get updated volunteer data
+        await getUserProfile();
+        return true;
+      } else {
+        debugPrint('Volunteer Profile Update Failed: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error updating volunteer profile: $e');
+    }
+    return false;
   }
 }

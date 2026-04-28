@@ -6,6 +6,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'pages/home_page.dart';
 import 'pages/auth/login_page.dart';
 import 'services/auth_service.dart';
+import 'services/issue_service.dart';
+import 'services/task_service.dart';
 import 'utils/fonts/app_fonts.dart';
 import 'firebase_options.dart';
 
@@ -23,7 +25,17 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [Provider<AuthService>(create: (_) => AuthService())],
+      providers: [
+        ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ChangeNotifierProxyProvider<AuthService, IssueService>(
+          create: (context) => IssueService(Provider.of<AuthService>(context, listen: false)),
+          update: (context, auth, previous) => previous ?? IssueService(auth),
+        ),
+        ChangeNotifierProxyProvider<AuthService, TaskService>(
+          create: (context) => TaskService(Provider.of<AuthService>(context, listen: false)),
+          update: (context, auth, previous) => previous ?? TaskService(auth),
+        ),
+      ],
       child: const MyApp(),
     ),
   );
