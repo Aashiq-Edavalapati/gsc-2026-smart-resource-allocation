@@ -7,7 +7,8 @@ import {
   upsertVolunteerProfile,
   registerDeviceToken,
   getTrustScoreHistory,
-  deleteMyAccount
+  deleteMyAccount,
+  getMyCreatedResources
 } from "../controllers/user.controller.js";
 import { verifyFirebaseToken } from "../middlewares/auth.js";
 
@@ -24,6 +25,7 @@ protectedRouter.delete("/me", deleteMyAccount);
 protectedRouter.post("/volunteer-profile", upsertVolunteerProfile);
 protectedRouter.post("/fcm-token", registerDeviceToken);
 protectedRouter.get("/trust-score/history", getTrustScoreHistory);
+protectedRouter.get('/my-created-resources', getMyCreatedResources);
 
 protectedRouter.get('/:id', getUserById);
 

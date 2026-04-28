@@ -6,7 +6,8 @@ import {
   upsertVolunteerProfileService,
   registerDeviceTokenService,
   getTrustScoreHistoryService,
-  deleteMyAccountService
+  deleteMyAccountService,
+  getMyCreatedResourcesService
 } from "../services/user.service.js";
 
 // POST /users/sync
@@ -140,5 +141,16 @@ export const deleteMyAccount = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// GET /users/my-created-resources
+export const getMyCreatedResources = async (req, res) => {
+  try {
+    const data = await getMyCreatedResourcesService(req.user.id);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message || "Failed to load created resources" });
   }
 };

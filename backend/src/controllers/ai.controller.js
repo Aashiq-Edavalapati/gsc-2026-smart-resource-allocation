@@ -2,6 +2,7 @@ import * as aiService from '../services/ai.service.js';
 import * as issueService from '../services/issue.service.js';
 import * as agenticPipeline from '../agents/orchestrator.js';
 import { uploadFile } from '../services/upload.service.js';
+import prisma from '../config/db.js';
 import {
   prepareFieldReportProcessing,
   updateFieldReportProcessing,
@@ -75,6 +76,7 @@ export const processFieldReportAndCreateIssues = async (req, res) => {
 
   try {
     const { lat, lng, city, organizationId } = req.body;
+    const title = typeof req.body.title === 'string' ? req.body.title.trim() : '';
     const description = typeof req.body.description === 'string' ? req.body.description.trim() : '';
     const directText = typeof req.body.text === 'string' ? req.body.text.trim() : '';
     const uploadedGroups = req.files && typeof req.files === 'object' ? req.files : {};
@@ -137,12 +139,34 @@ export const processFieldReportAndCreateIssues = async (req, res) => {
 
     const userId = req.user.id;
 
+    let creatorMembershipId = null;
+    if (organizationId) {
+      const membership = await prisma.organizationMember.findUnique({
+        where: {
+          userId_organizationId: {
+            userId,
+            organizationId
+          }
+        }
+      });
+
+      if (!membership || membership.status !== 'ACTIVE') {
+        return res.status(403).json({
+          success: false,
+          error: 'You must be an active member of this organization to create reports/issues/tasks'
+        });
+      }
+
+      creatorMembershipId = membership.id;
+    }
+
     const preparedReport = await prepareFieldReportProcessing({
       userId,
       organizationId,
       city,
       lat,
       lng,
+      title,
       description,
       contextText,
       mediaUrls: allMediaUrls
@@ -181,6 +205,7 @@ export const processFieldReportAndCreateIssues = async (req, res) => {
       lng,
       city,
       organizationId,
+      title,
       description,
       textContext: contextText,
       ocrContext: docOcrTexts.join('\n\n')
@@ -194,7 +219,14 @@ export const processFieldReportAndCreateIssues = async (req, res) => {
     const createdIssues = await issueService.createIssuesAndTasksFromAI(
       userId,
       pipelineResult,
-      { lat, lng, city, organizationId, fieldReportId: fieldReport.id }
+      {
+        lat,
+        lng,
+        city,
+        organizationId,
+        fieldReportId: fieldReport.id,
+        creatorMembershipId
+      }
     );
 
     await updateFieldReportProcessing(fieldReport.id, { pipelineStage: 'ISSUES_CREATED' });
@@ -238,3 +270,4 @@ export const processFieldReportAndCreateIssues = async (req, res) => {
     });
   }
 };
+
