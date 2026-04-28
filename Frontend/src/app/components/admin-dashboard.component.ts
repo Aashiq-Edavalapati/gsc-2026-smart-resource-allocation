@@ -22,37 +22,45 @@ import { AdminChartsComponent } from './admin/admin-charts.component';
     AdminChartsComponent
   ],
   template: `
-    <div class="flex h-screen bg-[#F5F6FA] font-sans overflow-hidden">
+    <div class="flex h-screen w-screen bg-background font-sans overflow-hidden">
       
-      <!-- Sidebar -->
-      <app-admin-sidebar (logout)="logout()"></app-admin-sidebar>
+      <!-- Sidebar Wrapper -->
+      <div class="flex-none h-full w-64 hidden md:block">
+        <app-admin-sidebar (logout)="logout()"></app-admin-sidebar>
+      </div>
 
-      <!-- Main Content -->
-      <main class="flex-1 flex flex-col h-full overflow-y-auto relative">
+      <!-- Main Content Wrapper -->
+      <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
         <!-- Header -->
-        <app-admin-header [stats]="stats()"></app-admin-header>
+        <app-admin-header [stats]="stats()" class="flex-none"></app-admin-header>
 
-        <!-- Dashboard Content -->
-        <div class="flex-1 p-8">
+        <!-- Dashboard Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
           
           <!-- Stats Cards -->
-          <app-admin-stats [stats]="stats()"></app-admin-stats>
+          <div>
+            <app-admin-stats [stats]="stats()"></app-admin-stats>
+          </div>
 
           <!-- Charts Section -->
-          <app-admin-charts [stats]="stats()"></app-admin-charts>
+          <div>
+            <app-admin-charts [stats]="stats()"></app-admin-charts>
+          </div>
 
           <!-- Pending Orgs List -->
-          <app-admin-pending-orgs 
-            [pendingOrgs]="pendingOrgs()" 
-            (verified)="loadDashboardData()">
-          </app-admin-pending-orgs>
+          <div>
+            <app-admin-pending-orgs 
+              [pendingOrgs]="pendingOrgs()" 
+              (verified)="loadDashboardData()">
+            </app-admin-pending-orgs>
+          </div>
 
         </div>
-      </main>
+      </div>
       
     </div>
-  `
+  `,
 })
 export class AdminDashboardComponent implements OnInit {
   private adminService = inject(AdminService);

@@ -7,71 +7,72 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
       
       <!-- Project Analytics (Bar Chart) - 2/3 Width -->
-      <div class="lg:col-span-2 bg-white rounded-3xl p-6 shadow-md shadow-gray-100/50 border border-gray-50 flex flex-col justify-between">
+      <div class="lg:col-span-2 rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between">
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h3 class="text-lg font-bold text-gray-900">Activity Analytics</h3>
-            <p class="text-xs text-gray-400 font-medium mt-0.5">Weekly platform interactions</p>
+            <h3 class="text-lg font-semibold tracking-tight">Activity Analytics</h3>
+            <p class="text-sm text-muted-foreground mt-0.5">Weekly platform interactions</p>
           </div>
           <div class="flex gap-2">
-            <span class="w-3 h-3 rounded-full bg-[#68417E] inline-block"></span>
-            <span class="w-3 h-3 rounded-full bg-[#98b65d] inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-primary inline-block shadow-sm"></span>
+            <span class="w-3 h-3 rounded-full bg-muted border border-border inline-block shadow-sm"></span>
           </div>
         </div>
 
         <!-- Bars Container -->
-        <div class="flex items-end justify-between h-48 px-4 mt-4 border-b border-gray-100 pb-2 relative">
+        <div class="flex items-end justify-between h-48 px-4 mt-4 border-b border-border pb-2 relative">
           <!-- Grid Lines -->
-          <div class="absolute inset-x-0 top-0 h-[1px] bg-gray-50"></div>
-          <div class="absolute inset-x-0 top-1/4 h-[1px] bg-gray-50"></div>
-          <div class="absolute inset-x-0 top-2/4 h-[1px] bg-gray-50"></div>
-          <div class="absolute inset-x-0 top-3/4 h-[1px] bg-gray-50"></div>
+          <div class="absolute inset-x-0 top-0 h-[1px] bg-border/40"></div>
+          <div class="absolute inset-x-0 top-1/4 h-[1px] bg-border/40"></div>
+          <div class="absolute inset-x-0 top-2/4 h-[1px] bg-border/40"></div>
+          <div class="absolute inset-x-0 top-3/4 h-[1px] bg-border/40"></div>
 
           <!-- Sunday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-gray-100/80 rounded-2xl h-16 group-hover:bg-[#68417E]/20 transition-all duration-300"></div>
-            <span class="text-xs font-bold text-gray-400">S</span>
+            <div class="w-full bg-muted rounded-t-md h-16 transition-all duration-300"></div>
+            <span class="text-xs font-semibold text-muted-foreground">S</span>
           </div>
           <!-- Monday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-[#68417E] rounded-2xl h-32 group-hover:bg-[#68417E]/90 transition-all duration-300 shadow-md shadow-[#68417E]/10"></div>
-            <span class="text-xs font-bold text-[#68417E]">M</span>
+            <div class="w-full bg-primary rounded-t-md h-32 transition-all duration-300 shadow-sm"></div>
+            <span class="text-xs font-bold text-foreground">M</span>
           </div>
           <!-- Tuesday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-[#98b65d] rounded-2xl h-24 group-hover:bg-[#98b65d]/90 transition-all duration-300 shadow-md shadow-[#98b65d]/10"></div>
-            <span class="text-xs font-bold text-[#98b65d]">T</span>
+            <div class="w-full bg-muted rounded-t-md border border-border h-24 transition-all duration-300 shadow-sm"></div>
+            <span class="text-xs font-semibold text-muted-foreground">T</span>
           </div>
           <!-- Wednesday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-[#68417E] rounded-2xl h-40 group-hover:bg-[#68417E]/90 transition-all duration-300 shadow-md shadow-[#68417E]/10"></div>
-            <span class="text-xs font-bold text-[#68417E]">W</span>
+            <div class="w-full bg-primary rounded-t-md h-40 transition-all duration-300 shadow-sm"></div>
+            <span class="text-xs font-bold text-foreground">W</span>
           </div>
           <!-- Thursday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-gray-100/80 rounded-2xl h-20 group-hover:bg-[#68417E]/20 transition-all duration-300"></div>
-            <span class="text-xs font-bold text-gray-400">T</span>
+            <div class="w-full bg-muted rounded-t-md h-20 transition-all duration-300"></div>
+            <span class="text-xs font-semibold text-muted-foreground">T</span>
           </div>
           <!-- Friday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-[#98b65d] rounded-2xl h-28 group-hover:bg-[#98b65d]/90 transition-all duration-300 shadow-md shadow-[#98b65d]/10"></div>
-            <span class="text-xs font-bold text-[#98b65d]">F</span>
+            <div class="w-full bg-muted rounded-t-md border border-border h-28 transition-all duration-300 shadow-sm"></div>
+            <span class="text-xs font-semibold text-muted-foreground">F</span>
           </div>
           <!-- Saturday -->
           <div class="flex flex-col items-center gap-2 w-8 group relative z-10">
-            <div class="w-full bg-gray-100/80 rounded-2xl h-12 group-hover:bg-[#68417E]/20 transition-all duration-300"></div>
-            <span class="text-xs font-bold text-gray-400">S</span>
+            <div class="w-full bg-muted rounded-t-md h-12 transition-all duration-300"></div>
+            <span class="text-xs font-semibold text-muted-foreground">S</span>
           </div>
         </div>
       </div>
 
       <!-- Project Progress (Radial Chart) - 1/3 Width -->
-      <div class="bg-white rounded-3xl p-6 shadow-md shadow-gray-100/50 border border-gray-50 flex flex-col justify-between items-center relative">
+      <div class="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between items-center relative">
         <div class="w-full text-left mb-4">
-          <h3 class="text-lg font-bold text-gray-900">Issue Resolution</h3>
-          <p class="text-xs text-gray-400 font-medium mt-0.5">Overall progress rate</p>
+          <h3 class="text-lg font-semibold tracking-tight">Issue Resolution</h3>
+          <p class="text-sm text-muted-foreground mt-0.5">Overall progress rate</p>
         </div>
 
         <!-- Gauge Chart SVG -->
@@ -80,40 +81,39 @@ import { CommonModule } from '@angular/common';
             <!-- Background Circle -->
             <circle 
               cx="50" cy="50" r="40" 
-              stroke="#F5F6FA" 
+              class="stroke-muted" 
               stroke-width="12" 
               fill="transparent"
-              class="transition-all duration-1000"
             />
             <!-- Progress Circle -->
             <circle 
               cx="50" cy="50" r="40" 
-              stroke="#68417E" 
+              class="stroke-primary" 
               stroke-width="12" 
               fill="transparent" 
               [attr.stroke-dasharray]="circumference" 
               [attr.stroke-dashoffset]="dashOffset" 
               stroke-linecap="round"
-              class="transition-all duration-1000 ease-out shadow-sm"
+              class="transition-all duration-1000 ease-out"
             />
           </svg>
           
           <!-- Center Text -->
           <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-3xl font-black text-gray-800 tracking-tight">{{ resolutionRate }}%</span>
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">Resolved</span>
+            <span class="text-3xl font-black text-foreground tracking-tight">{{ resolutionRate }}%</span>
+            <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Resolved</span>
           </div>
         </div>
 
         <!-- Legend -->
         <div class="flex items-center gap-4 mt-4 text-xs font-semibold">
           <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-md bg-[#68417E] inline-block"></span>
-            <span class="text-gray-600">Resolved</span>
+            <span class="w-2.5 h-2.5 rounded-sm bg-primary inline-block shadow-sm"></span>
+            <span class="text-foreground">Resolved</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-md bg-[#F5F6FA] inline-block"></span>
-            <span class="text-gray-400">Open</span>
+            <span class="w-2.5 h-2.5 rounded-sm bg-muted border border-border inline-block"></span>
+            <span class="text-muted-foreground">Open</span>
           </div>
         </div>
 
