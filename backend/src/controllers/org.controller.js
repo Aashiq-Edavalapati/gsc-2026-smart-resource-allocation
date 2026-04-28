@@ -162,3 +162,12 @@ export const getOrgDashboard = async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 };
+
+export const getOrgCreatedResources = async (req, res) => {
+  try {
+    const data = await orgService.getOrgCreatedResources(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};

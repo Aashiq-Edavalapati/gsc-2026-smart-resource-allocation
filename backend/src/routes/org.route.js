@@ -51,5 +51,6 @@ router.post('/:id/verify-otp', requireOrgRole(['OWNER']), orgController.verifyOt
 
 // ---------- DASHBOARD ----------
 router.get('/:id/dashboard', requireOrgRole(['ADMIN', 'OWNER']), orgController.getOrgDashboard);
+router.get('/:id/created-resources', requireOrgRole(['ADMIN', 'OWNER']), orgController.getOrgCreatedResources);
 
 export default router;
