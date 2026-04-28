@@ -336,7 +336,7 @@ export class MapPlaceholderComponent implements OnInit, AfterViewInit, OnDestroy
     this.error = null;
     this.statusMessage = '';
 
-    const url = `${environment.api.url}/api/v1/issues/nearby?lat=${this.userLocation.lat}&lng=${this.userLocation.lng}&radius=${SEARCH_RADIUS_METERS}`;
+    const url = `${environment.apiUrl}/api/v1/issues/nearby?lat=${this.userLocation.lat}&lng=${this.userLocation.lng}&radius=${SEARCH_RADIUS_METERS}`;
 
     this.http.get<NearbyResponse>(url).subscribe(
       (response) => {

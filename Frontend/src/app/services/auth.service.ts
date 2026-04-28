@@ -24,6 +24,13 @@ export class AuthService {
 
   constructor() {
     this.initAuthListener();
+    // Fallback to prevent app from getting stuck on bland/empty screen if Firebase hangs
+    setTimeout(() => {
+      if (this.isLoading()) {
+        console.warn('⏳ Firebase auth listener timed out. Forcing loading state to false.');
+        this.isLoading.set(false);
+      }
+    }, 3000);
   }
 
   private initAuthListener() {
