@@ -12,13 +12,19 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/', 'audio/', 'video/'];
+  const allowedDocTypes = [
+    'application/pdf',
+    'text/plain',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
 
   const isAllowed = allowedTypes.some(type =>
     file.mimetype.startsWith(type)
-  );
+  ) || allowedDocTypes.includes(file.mimetype);
 
   if (!isAllowed) {
-    return cb(new Error('Only image, audio, video files allowed'), false);
+    return cb(new Error('Only image, audio, video, and document files allowed'), false);
   }
 
   cb(null, true);

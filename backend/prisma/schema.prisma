@@ -144,6 +144,8 @@ model OrganizationMember {
   organization Organization @relation(fields: [organizationId], references: [id])
 
   createdTasks Task[]
+  approvedIssues Issue[] @relation("IssueApprovedBy")
+  approvedTasks Task[] @relation("TaskApprovedBy")
 
   createdAt DateTime @default(now())
 
@@ -176,10 +178,17 @@ model FieldReport {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  requestFingerprint String? @unique
+
   title       String?
   description String?
 
   aiSummary   String? // AI generated summary
+  aiRawOutput  Json?
+  aiProcessed  Boolean @default(false)
+  aiProcessedAt DateTime?
+
+  pipelineStage String @default("RECEIVED")
 
   status      String @default("PROCESSING") // PROCESSING / COMPLETED / FAILED
 
@@ -263,6 +272,12 @@ enum IssueCategory {
   OTHER
 }
 
+enum ApprovalStatus {
+  SUGGESTED
+  APPROVED
+  REJECTED
+}
+
 model Issue {
   id            String   @id @default(cuid())
   title         String
@@ -279,6 +294,10 @@ model Issue {
 
   source        IssueSource @default(USER)
   isPublic      Boolean @default(true)
+
+  approvalStatus ApprovalStatus @default(SUGGESTED)
+  approvedByMembershipId String?
+  approvedByMembership OrganizationMember? @relation("IssueApprovedBy", fields: [approvedByMembershipId], references: [id])
 
   location      Unsupported("geometry(Point, 4326)")
   city          String
@@ -351,10 +370,14 @@ model Task {
   title       String
   description String?
 
+  category    IssueCategory
   requiredSkills String[] @default([])
   volunteersNeeded Int
 
   status      TaskStatus @default(OPEN)
+  approvalStatus ApprovalStatus @default(SUGGESTED)
+  approvedByMembershipId String?
+  approvedByMembership OrganizationMember? @relation("TaskApprovedBy", fields: [approvedByMembershipId], references: [id])
 
   createdByMembershipId String?
   createdByMembership OrganizationMember? @relation(fields: [createdByMembershipId], references: [id])

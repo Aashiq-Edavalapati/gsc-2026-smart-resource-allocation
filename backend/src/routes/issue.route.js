@@ -36,4 +36,9 @@ router.delete('/comments/:commentId', issueController.deleteComment);
 router.post('/:id/media', issueController.addMedia);
 router.delete('/media/:mediaId', issueController.deleteMedia);
 
+// ---------- APPROVAL (ORG ADMIN ONLY) ----------
+router.get('/organization/:orgId/suggested', issueController.getSuggestedIssues);
+router.post('/:issueId/approve', issueController.approveIssue);
+router.post('/:issueId/reject', issueController.rejectIssue);
+
 export default router;
