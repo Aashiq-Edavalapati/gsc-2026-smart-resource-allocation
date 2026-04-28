@@ -9,13 +9,14 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { firebaseAuth } from '../../firebase.config';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private auth: Auth = firebaseAuth;
-  private apiUrl = 'http://localhost:5000/api/v1/users';
+  private apiUrl = `${environment.apiUrl}/users`;
 
   authUser = signal<any>(null);
   isLoggedIn = signal(false);
@@ -23,6 +24,13 @@ export class AuthService {
 
   constructor() {
     this.initAuthListener();
+    // Fallback to prevent app from getting stuck on bland/empty screen if Firebase hangs
+    setTimeout(() => {
+      if (this.isLoading()) {
+        console.warn('⏳ Firebase auth listener timed out. Forcing loading state to false.');
+        this.isLoading.set(false);
+      }
+    }, 3000);
   }
 
   private initAuthListener() {
