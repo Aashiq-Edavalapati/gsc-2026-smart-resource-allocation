@@ -12,6 +12,18 @@ class MainTitleBar extends StatelessWidget implements PreferredSizeWidget {
       title: const Text(
         '', // Empty for now as requested
       ),
+      flexibleSpace: SizedBox.expand(
+        child: ClipRect(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            child: Transform.scale(
+              scale: 1.3,
+              child: Image.asset('earth.gif'),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
