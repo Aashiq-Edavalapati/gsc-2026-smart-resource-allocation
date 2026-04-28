@@ -20,6 +20,7 @@
 | POST | `/api/v1/users/fcm-token` | JSON body: `token` | `{ success: true, data }` | Registers an FCM device token for push notifications |
 | GET | `/api/v1/users/trust-score/history` | No body; auth required | `{ success: true, data }` | Returns trust score history entries for the authenticated user |
 | GET | `/api/v1/users/:id` | Path param `id` | `{ user }` | Returns a public user profile by ID |
+| GET | `/api/v1/users/my-created-resources` | No body; auth required (`Authorization: Bearer <Firebase ID token>`) | `{ success: true, data: { fieldReports: [], issues: [], tasks: [] } }` | Returns field reports, issues, and tasks created by the authenticated user (includes SUGGESTED and APPROVED items) |
 
 ## Organizations
 
@@ -41,6 +42,7 @@
 | POST | `/api/v1/organizations/:id/send-otp` | Auth + OWNER role; no body | `{ success: true, message }` | Sends verification OTP to the verified contact email |
 | POST | `/api/v1/organizations/:id/verify-otp` | Auth + OWNER role; JSON body: `otp` | `{ success: true, data }` | Verifies NGO OTP and marks the organization verified |
 | GET | `/api/v1/organizations/:id/dashboard` | Auth + ADMIN/OWNER role; no body | `{ success: true, data }` | Returns organization dashboard counts for issues, tasks, and members |
+| GET | `/api/v1/organizations/:id/created-resources` | Auth + ADMIN/OWNER role; path param `id` | `{ success: true, data: { fieldReports: [], issues: [], tasks: [] } }` | Returns field reports, issues, and tasks created by or associated with the organization (useful for review and approval workflows) |
 
 ## Issues
 

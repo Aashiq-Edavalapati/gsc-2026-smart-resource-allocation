@@ -11,6 +11,7 @@ export class AdminService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private baseUrl = `${environment.apiUrl}/admin`;
+  private organizationsUrl = `${environment.apiUrl}/organizations`;
 
   private async getHeaders(): Promise<HttpHeaders> {
     const user = this.authService.getCurrentUser();
@@ -29,6 +30,11 @@ export class AdminService {
   async getPendingOrganizations() {
     const headers = await this.getHeaders();
     const response = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/organizations/pending`, { headers }));
+    return response.data;
+  }
+
+  async getOrganization(id: string) {
+    const response = await firstValueFrom(this.http.get<any>(`${this.organizationsUrl}/${id}`));
     return response.data;
   }
 

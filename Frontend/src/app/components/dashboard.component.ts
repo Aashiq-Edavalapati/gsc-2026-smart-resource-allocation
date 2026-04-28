@@ -1,13 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { MapPlaceholderComponent } from './map-placeholder.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MapPlaceholderComponent],
+  imports: [CommonModule, RouterLink, MapPlaceholderComponent],
   template: `
     <div class="min-h-screen bg-background text-foreground flex flex-col">
       <!-- Shadcn-style Navbar -->
@@ -97,6 +97,24 @@ import { MapPlaceholderComponent } from './map-placeholder.component';
               {{ showMap ? 'Hide Map' : 'Open Map' }}
             </button>
           </div>
+
+          <!-- Organization Card -->
+          <div class="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="font-semibold tracking-tight text-lg mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
+                Organizations
+              </h3>
+              <p class="text-sm text-muted-foreground mb-4">Manage your NGO or Social Group.</p>
+            </div>
+            <a
+              routerLink="/organizations/create"
+              class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full mt-2"
+            >
+              Create Organization
+            </a>
+          </div>
+
         </div>
 
         <!-- Map View -->

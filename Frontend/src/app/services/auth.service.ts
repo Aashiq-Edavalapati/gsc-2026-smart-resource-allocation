@@ -19,6 +19,7 @@ export class AuthService {
   private apiUrl = `${environment.apiUrl}/users`;
 
   authUser = signal<any>(null);
+  userProfile = signal<any>(null);
   isLoggedIn = signal(false);
   isLoading = signal(true);
 
@@ -42,6 +43,11 @@ export class AuthService {
       if (user) {
         const token = await user.getIdToken();
         console.log('🔥 Firebase ID Token:', token);
+        this.refreshCurrentProfile().catch((error) => {
+          console.warn('Failed to refresh backend profile', error);
+        });
+      } else {
+        this.userProfile.set(null);
       }
     });
   }
@@ -51,6 +57,7 @@ export class AuthService {
     try {
       const result = await createUserWithEmailAndPassword(this.auth, email, password);
       await this.syncWithBackend(result.user);
+      await this.refreshCurrentProfile();
       return result.user;
     } catch (error: any) {
       throw this.getErrorMessage(error);
@@ -61,6 +68,7 @@ export class AuthService {
     try {
       const result = await signInWithEmailAndPassword(this.auth, email, password);
       await this.syncWithBackend(result.user);
+      await this.refreshCurrentProfile();
       return result.user;
     } catch (error: any) {
       throw this.getErrorMessage(error);
@@ -72,6 +80,7 @@ export class AuthService {
     try {
       const result = await signInWithPopup(this.auth, new GoogleAuthProvider());
       await this.syncWithBackend(result.user);
+      await this.refreshCurrentProfile();
       return result.user;
     } catch (error: any) {
       throw this.getErrorMessage(error);
@@ -102,10 +111,35 @@ export class AuthService {
     }
   }
 
+  async refreshCurrentProfile() {
+    const user = this.getCurrentUser();
+
+    if (!user) {
+      this.userProfile.set(null);
+      return null;
+    }
+
+    const idToken = await user.getIdToken();
+    const response = await fetch(`${this.apiUrl}/me`, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load user profile');
+    }
+
+    const payload = await response.json();
+    this.userProfile.set(payload.user ?? null);
+    return payload.user ?? null;
+  }
+
   // ==================== GENERAL ====================
   async logout() {
     try {
       await signOut(this.auth);
+      this.userProfile.set(null);
     } catch (error: any) {
       throw this.getErrorMessage(error);
     }
@@ -113,6 +147,10 @@ export class AuthService {
 
   getCurrentUser() {
     return this.authUser();
+  }
+
+  getCurrentProfile() {
+    return this.userProfile();
   }
 
   private getErrorMessage(error: any): string {
