@@ -7,6 +7,7 @@ class RecordingActionSheet extends StatefulWidget {
   final VoidCallback onRecordVideo;
   final VoidCallback onToggleAudioRecording;
   final VoidCallback onTakePhoto;
+  final VoidCallback onPickGallery;
   final bool isViewingHistory;
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
@@ -20,6 +21,7 @@ class RecordingActionSheet extends StatefulWidget {
     required this.onRecordVideo,
     required this.onToggleAudioRecording,
     required this.onTakePhoto,
+    required this.onPickGallery,
     required this.isViewingHistory,
     required this.onSubmit,
     required this.onCancel,
@@ -87,10 +89,9 @@ class _RecordingActionSheetState extends State<RecordingActionSheet> {
             ),
           ),
 
-
         if (!widget.isViewingHistory)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -114,6 +115,13 @@ class _RecordingActionSheetState extends State<RecordingActionSheet> {
                     icon: Icons.camera_alt_outlined,
                     label: "Photo",
                     onTap: widget.onTakePhoto,
+                  ),
+                ),
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.photo_library_outlined,
+                    label: "Gallery",
+                    onTap: widget.onPickGallery,
                   ),
                 ),
               ],

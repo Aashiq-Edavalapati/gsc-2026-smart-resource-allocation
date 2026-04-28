@@ -136,6 +136,22 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _pickGallery() async {
+    try {
+      final List<XFile> selectedImages = await _picker.pickMultiImage();
+      if (selectedImages.isNotEmpty) {
+        setState(() {
+          for (var file in selectedImages) {
+            _mediaFiles.add({'type': 'photo', 'path': file.path});
+          }
+        });
+        _scrollToEnd();
+      }
+    } catch (e) {
+      debugPrint('Error picking gallery images: $e');
+    }
+  }
+
   Future<void> _toggleAudioRecording() async {
     try {
       if (_isRecordingAudio) {
@@ -412,6 +428,7 @@ class _HomePageState extends State<HomePage> {
                               onRecordVideo: _recordVideo,
                               onToggleAudioRecording: _toggleAudioRecording,
                               onTakePhoto: _takePhoto,
+                              onPickGallery: _pickGallery,
                               isViewingHistory: _selectedHistoryItem != null,
                               titleController: _titleController,
                               onSubmit: () async {
