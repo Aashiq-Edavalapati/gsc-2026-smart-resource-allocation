@@ -78,7 +78,7 @@ export const getSuggestedTasks = async (req, res) => {
       where: {
         userId: req.user.id,
         organizationId: orgId,
-        baseRole: { in: ['ADMIN', 'OWNER'] },
+        baseRole: { in: ['ADMIN', 'OWNER', 'MEMBER'] },
         status: 'ACTIVE'
       }
     });

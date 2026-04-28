@@ -42,7 +42,16 @@ import { AdminService } from '../../services/admin.service';
               </div>
               <div>
                 <h4 class="font-semibold text-sm">{{ org.name }}</h4>
-                <p class="text-xs text-muted-foreground mt-0.5">Reg: {{ org.registrationNumber || 'N/A' }} • {{ org.city || 'Location unknown' }}</p>
+                <div class="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                  <span>Darpan ID: {{ org.darpanId || 'N/A' }}</span>
+                  <button 
+                    *ngIf="org.darpanId"
+                    (click)="$event.stopPropagation(); copyDarpanId(org.darpanId)"
+                    class="inline-flex items-center justify-center rounded border border-input bg-background px-1.5 py-0.5 text-[10px] font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+                    {{ copiedId === org.darpanId ? 'Copied!' : 'Copy' }}
+                  </button>
+                  <span>• {{ org.city || 'Location unknown' }}</span>
+                </div>
               </div>
             </div>
 
@@ -72,8 +81,21 @@ import { AdminService } from '../../services/admin.service';
               <div>
                 <h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Organization Type</h5>
                 <p class="text-sm">{{ org.type || 'N/A' }}</p>
+
+                <h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 mt-3">Darpan ID</h5>
+                <div class="flex items-center gap-2 mt-1">
+                  <code class="text-sm font-mono bg-muted px-2.5 py-1 rounded border border-border">{{ org.darpanId || 'N/A' }}</code>
+                  <button 
+                    *ngIf="org.darpanId"
+                    (click)="copyDarpanId(org.darpanId)"
+                    class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-2 gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    {{ copiedId === org.darpanId ? 'Copied!' : 'Copy' }}
+                  </button>
+                </div>
+                
                 <h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 mt-3">Verified Contact</h5>
-                <p class="text-sm font-mono bg-muted inline-block px-2 py-0.5 rounded">{{ org.verifiedContactEmail || 'None' }}</p>
+                <p class="text-sm font-mono bg-muted inline-block px-2 py-0.5 rounded">{{ org.verifiedEmail || org.verifiedContactEmail || 'None' }}</p>
               </div>
             </div>
 
@@ -129,6 +151,19 @@ export class AdminPendingOrgsComponent {
   contactEmail = '';
   isSubmitting = false;
   errorMsg = '';
+  copiedId = '';
+
+  copyDarpanId(id: string) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(id);
+    }
+    this.copiedId = id;
+    setTimeout(() => {
+      if (this.copiedId === id) {
+        this.copiedId = '';
+      }
+    }, 2000);
+  }
 
   toggleExpand(id: string) {
     if (this.expandedOrgId === id) {

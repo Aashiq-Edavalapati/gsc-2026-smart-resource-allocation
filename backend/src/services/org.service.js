@@ -327,13 +327,27 @@ export const getUserInvites = async (email) => {
 };
 
 export const getOrgDashboard = async (orgId) => {
-  const [issues, tasks, members] = await Promise.all([
-    prisma.issue.count({ where: { ownerOrgId: orgId } }),
+  const [organization, issues, tasks, members] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: orgId } }),
+    prisma.issue.count({ where: { ownerOrgId: orgId, status: { not: 'RESOLVED' } } }),
     prisma.task.count({
-      where: { issue: { ownerOrgId: orgId } }
+      where: { issue: { ownerOrgId: orgId }, status: 'COMPLETED' }
     }),
     prisma.organizationMember.count({ where: { organizationId: orgId } })
   ]);
 
-  return { issues, tasks, members };
+  return { organization, stats: { activeIssues: issues, completedTasks: tasks, totalMembers: members } };
+};
+
+export const getFieldReports = async (orgId) => {
+  return prisma.fieldReport.findMany({
+    where: { organizationId: orgId },
+    include: {
+      media: true,
+      createdByUser: {
+        select: { id: true, name: true, email: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
 };

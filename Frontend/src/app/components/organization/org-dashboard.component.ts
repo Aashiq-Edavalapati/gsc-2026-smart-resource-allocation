@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, effect, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -21,22 +21,26 @@ import { OrgResourcesComponent } from './org-resources.component';
           <p class="text-sm text-muted-foreground mt-1">Admin Dashboard</p>
         </div>
         <div class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-          <button 
-            (click)="currentTab.set('overview')" 
-            [class.bg-accent]="currentTab() === 'overview'"
-            [class.text-accent-foreground]="currentTab() === 'overview'"
-            class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-            Overview
-          </button>
-          <button 
-            (click)="currentTab.set('members')" 
-            [class.bg-accent]="currentTab() === 'members'"
-            [class.text-accent-foreground]="currentTab() === 'members'"
-            class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Members
-          </button>
+          <!-- Admin/Owner Tabs -->
+          <ng-container *ngIf="userRole() === 'ADMIN' || userRole() === 'OWNER'">
+            <button 
+              (click)="currentTab.set('overview')" 
+              [class.bg-accent]="currentTab() === 'overview'"
+              [class.text-accent-foreground]="currentTab() === 'overview'"
+              class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              Overview
+            </button>
+            <button 
+              (click)="currentTab.set('members')" 
+              [class.bg-accent]="currentTab() === 'members'"
+              [class.text-accent-foreground]="currentTab() === 'members'"
+              class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Members
+            </button>
+          </ng-container>
+
           <button 
             (click)="currentTab.set('resources')" 
             [class.bg-accent]="currentTab() === 'resources'"
@@ -44,6 +48,16 @@ import { OrgResourcesComponent } from './org-resources.component';
             class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             Resources & Reports
+          </button>
+
+          <!-- Report Upload Tab -->
+          <button 
+            (click)="currentTab.set('upload')" 
+            [class.bg-accent]="currentTab() === 'upload'"
+            [class.text-accent-foreground]="currentTab() === 'upload'"
+            class="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Submit Field Report
           </button>
         </div>
         <div class="p-4 border-t">
@@ -114,22 +128,46 @@ import { OrgResourcesComponent } from './org-resources.component';
                     </div>
 
                     <!-- Step 3: OTP Verification -->
-                    <div *ngIf="orgDashboardData()?.organization?.verificationStatus === 'CONTACT_ADDED'">
-                      <label class="block text-sm font-medium mb-1">Step 3: Verify Contact Email</label>
-                      <p class="text-xs text-muted-foreground mb-3">An admin has linked <strong>{{ orgDashboardData()?.organization?.verifiedContactEmail || 'an email' }}</strong> to your Darpan ID.</p>
+                    <div *ngIf="orgDashboardData()?.organization?.verificationStatus === 'CONTACT_ADDED'" class="bg-accent/20 border border-border p-4 rounded-xl mt-4 animate-in slide-in-from-bottom-2 duration-300">
+                      <label class="block text-sm font-semibold mb-1 text-foreground flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M18 16v6"/><path d="m15 19 3 3 3-3"/></svg>
+                        Step 3: Verify Contact Email
+                      </label>
+                      <p class="text-xs text-muted-foreground mb-4">
+                        An admin has linked <strong class="text-foreground">{{ orgDashboardData()?.organization?.verifiedEmail || orgDashboardData()?.organization?.verifiedContactEmail || 'an email' }}</strong> to your Darpan ID.
+                      </p>
                       
-                      <div *ngIf="!otpSent" class="mb-2">
-                        <button (click)="sendOtp()" [disabled]="isVerifying" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-primary text-primary hover:bg-primary/10 h-9 px-4">
-                          Send Verification OTP
-                        </button>
-                      </div>
-
-                      <div *ngIf="otpSent" class="flex gap-2">
-                        <input type="text" [(ngModel)]="verificationOtp" placeholder="Enter 6-digit OTP" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-                        <button (click)="verifyOtp()" [disabled]="isVerifying || !verificationOtp" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4">
-                          <span *ngIf="isVerifying" class="w-4 h-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
-                          Verify
-                        </button>
+                      <div class="space-y-3">
+                        <div class="flex flex-col gap-1.5">
+                          <span class="text-xs font-medium text-muted-foreground">Verification Code</span>
+                          <div class="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              [(ngModel)]="verificationOtp" 
+                              name="otp"
+                              placeholder="Enter 6-digit OTP" 
+                              class="flex h-10 w-full max-w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono tracking-widest text-center" 
+                            />
+                            <button 
+                              (click)="verifyOtp()" 
+                              [disabled]="isVerifying || !verificationOtp" 
+                              class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-4 gap-2">
+                              <span *ngIf="isVerifying" class="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
+                              Verify OTP
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div class="pt-2 border-t border-border/50 flex items-center justify-between">
+                          <span class="text-xs text-muted-foreground">Didn't receive a code?</span>
+                          <button 
+                            (click)="sendOtp()" 
+                            [disabled]="isVerifying" 
+                            class="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 8"/></svg>
+                            {{ otpSent ? 'Resend OTP' : 'Send OTP' }}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -214,8 +252,49 @@ import { OrgResourcesComponent } from './org-resources.component';
           <app-org-resources 
             *ngIf="currentTab() === 'resources' && orgId()" 
             [orgId]="orgId()!" 
+            [userRole]="userRole()"
             class="animate-in fade-in duration-500">
           </app-org-resources>
+
+          <!-- Upload Tab -->
+          <div *ngIf="currentTab() === 'upload'" class="max-w-2xl mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
+              <div class="p-6 border-b">
+                <h3 class="font-semibold tracking-tight text-lg">Submit Field Report</h3>
+                <p class="text-sm text-muted-foreground">Upload images, audio, or video. The AI will automatically process the content to generate a report, extract issues, and create tasks.</p>
+              </div>
+              <div class="p-6 space-y-6">
+                
+                <div *ngIf="reportSuccessMsg" class="p-4 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-md text-sm font-medium">
+                  {{ reportSuccessMsg }}
+                </div>
+                
+                <div *ngIf="reportErrorMsg" class="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md text-sm font-medium">
+                  {{ reportErrorMsg }}
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-sm font-medium">File Upload (Image/Video/Audio)</label>
+                  <input type="file" (change)="onFileSelected($event)" accept="image/*,video/*,audio/*" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="text-sm font-medium">City</label>
+                  <input type="text" [(ngModel)]="reportCity" placeholder="e.g. Mumbai" class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="text-sm font-medium">Description (Optional Notes)</label>
+                  <textarea [(ngModel)]="reportDescription" rows="4" placeholder="Add any manual notes..." class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
+                </div>
+
+                <button (click)="submitReport()" [disabled]="isSubmittingReport || !reportFile || !reportCity" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                  <span *ngIf="isSubmittingReport" class="w-4 h-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></span>
+                  {{ isSubmittingReport ? 'Processing via AI Pipeline...' : 'Submit Report' }}
+                </button>
+              </div>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -229,9 +308,16 @@ export class OrgDashboardComponent implements OnInit {
   private authService = inject(AuthService);
 
   orgId = signal<string | null>(null);
+
+  @Input() set embeddedOrgId(value: string | null) {
+    if (value) {
+      this.orgId.set(value);
+    }
+  }
   orgName = signal<string>('');
   orgDashboardData = signal<any>(null);
-  currentTab = signal<'overview' | 'members' | 'resources'>('overview');
+  userRole = signal<string>('MEMBER');
+  currentTab = signal<'overview' | 'members' | 'resources' | 'upload'>('overview');
   isLoading = signal(true);
   userEmail = signal<string>('');
 
@@ -242,12 +328,45 @@ export class OrgDashboardComponent implements OnInit {
   otpSent = false;
   verificationError = '';
 
+  // Field Report State
+  reportCity = '';
+  reportDescription = '';
+  reportFile: File | null = null;
+  isSubmittingReport = false;
+  reportSuccessMsg = '';
+  reportErrorMsg = '';
+
+  constructor() {
+    // Reactively monitor profile and evaluate role
+    effect(() => {
+      const profile = this.authService.userProfile();
+      const id = this.orgId();
+      if (profile?.memberships && id) {
+        const membership = profile.memberships.find((m: any) => m.organizationId === id);
+        if (membership) {
+          const role = membership.baseRole;
+          this.userRole.set(role);
+          
+          if (role === 'MEMBER') {
+            this.currentTab.set('upload');
+            this.isLoading.set(false);
+          } else {
+            this.currentTab.set('overview');
+          }
+          // If admin/owner, refresh dashboard data
+          if (role !== 'MEMBER') {
+            this.loadDashboardData(id);
+          }
+        }
+      }
+    });
+  }
+
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       const id = params.get('orgId');
       if (id) {
         this.orgId.set(id);
-        this.loadDashboardData(id);
       }
     });
 
@@ -258,6 +377,11 @@ export class OrgDashboardComponent implements OnInit {
   }
 
   async loadDashboardData(id: string) {
+    if (this.userRole() === 'MEMBER') {
+      this.isLoading.set(false);
+      return; // Standard members do not need to load the admin dashboard stats
+    }
+
     this.isLoading.set(true);
     try {
       const data = await this.orgService.getOrganizationDashboard(id);
@@ -319,5 +443,43 @@ export class OrgDashboardComponent implements OnInit {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.reportFile = file;
+    }
+  }
+
+  async submitReport() {
+    if (!this.reportFile || !this.reportCity || !this.orgId()) return;
+    this.isSubmittingReport = true;
+    this.reportSuccessMsg = '';
+    this.reportErrorMsg = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('files[]', this.reportFile);
+      formData.append('city', this.reportCity);
+      formData.append('description', this.reportDescription);
+      formData.append('organizationId', this.orgId()!);
+      
+      // Send some dummy lat/lng as required by backend schema if actual location is unavailable
+      formData.append('lat', '28.6139');
+      formData.append('lng', '77.2090');
+
+      await this.orgService.submitFieldReport(formData);
+      this.reportSuccessMsg = 'Report submitted and processed by AI successfully!';
+      this.reportFile = null;
+      this.reportCity = '';
+      this.reportDescription = '';
+      
+      // Reset file input visually if needed, though Angular bindings typically handle this
+    } catch (error: any) {
+      this.reportErrorMsg = error.message || 'Failed to submit field report.';
+    } finally {
+      this.isSubmittingReport = false;
+    }
   }
 }

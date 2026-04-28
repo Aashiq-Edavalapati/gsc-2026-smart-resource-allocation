@@ -58,7 +58,7 @@ export const verifyOrgRole = async (userId, orgId) => {
       userId,
       organizationId: orgId,
       baseRole: {
-        in: ['ADMIN', 'OWNER']
+        in: ['ADMIN', 'OWNER', 'MEMBER']
       }
     }
   });
@@ -463,12 +463,12 @@ export const getSuggestedIssues = async (orgId) => {
   return prisma.issue.findMany({
     where: {
       ownerOrgId: orgId,
-      approvalStatus: 'SUGGESTED'
+      approvalStatus: { in: ['SUGGESTED', 'APPROVED'] }
     },
     include: {
       tasks: {
         where: {
-          approvalStatus: 'SUGGESTED'
+          approvalStatus: { in: ['SUGGESTED', 'APPROVED'] }
         }
       },
       _count: {

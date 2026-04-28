@@ -141,6 +141,15 @@ export class OrganizationDashboardService {
     return response.data ?? [];
   }
 
+  async getFieldReports(id: string) {
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/organizations/${id}/field-reports`, { headers })
+    );
+
+    return response.data ?? [];
+  }
+
   async approveIssue(issueId: string, orgId: string) {
     const headers = await this.getHeaders();
     const response = await firstValueFrom(
@@ -173,7 +182,16 @@ export class OrganizationDashboardService {
     const response = await firstValueFrom(
       this.http.post<any>(`${this.baseUrl}/tasks/${taskId}/reject`, { orgId }, { headers })
     );
-
     return response.data;
+  }
+
+  async submitFieldReport(formData: FormData) {
+    // Note: HttpClient handles Content-Type for FormData automatically
+    // But we still need the Auth header
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(
+      this.http.post<any>(`${this.baseUrl}/ai/process-field-report-and-create-issues`, formData, { headers })
+    );
+    return response; // AI endpoint returns {success, message, data}
   }
 }

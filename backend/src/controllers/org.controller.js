@@ -162,3 +162,12 @@ export const getOrgDashboard = async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 };
+
+export const getFieldReports = async (req, res) => {
+  try {
+    const reports = await orgService.getFieldReports(req.params.id);
+    res.json({ success: true, data: reports });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};

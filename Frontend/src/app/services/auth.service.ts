@@ -31,23 +31,25 @@ export class AuthService {
         console.warn('⏳ Firebase auth listener timed out. Forcing loading state to false.');
         this.isLoading.set(false);
       }
-    }, 3000);
+    }, 5000);
   }
 
   private initAuthListener() {
     onIdTokenChanged(this.auth, async (user) => {
       this.authUser.set(user);
       this.isLoggedIn.set(!!user);
-      this.isLoading.set(false);
 
       if (user) {
-        const token = await user.getIdToken();
-        console.log('🔥 Firebase ID Token:', token);
-        this.refreshCurrentProfile().catch((error) => {
+        try {
+          await this.refreshCurrentProfile();
+        } catch (error) {
           console.warn('Failed to refresh backend profile', error);
-        });
+        } finally {
+          this.isLoading.set(false);
+        }
       } else {
         this.userProfile.set(null);
+        this.isLoading.set(false);
       }
     });
   }

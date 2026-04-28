@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { OrganizationDashboardService } from '../../services/organization-dashboard.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-create-org',
@@ -146,9 +147,10 @@ import { OrganizationDashboardService } from '../../services/organization-dashbo
     </div>
   `
 })
-export class CreateOrgComponent {
+export class CreateOrgComponent implements OnInit {
   private orgService = inject(OrganizationDashboardService);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   isLoading = signal(false);
   errorMsg = signal('');
@@ -161,6 +163,18 @@ export class CreateOrgComponent {
     lat: null,
     lng: null
   };
+
+  constructor() {
+    effect(() => {
+      const profile = this.authService.userProfile();
+      if (profile?.memberships && profile.memberships.length > 0) {
+        const orgId = profile.memberships[0].organizationId;
+        this.router.navigate(['/dashboard']);
+      }
+    });
+  }
+
+  ngOnInit() {}
 
   async onSubmit() {
     this.isLoading.set(true);
@@ -180,7 +194,7 @@ export class CreateOrgComponent {
       const created = await this.orgService.createOrganization(payload);
       
       // Navigate to the newly created organization dashboard
-      this.router.navigate(['/organizations', created.id, 'dashboard']);
+      this.router.navigate(['/dashboard']);
     } catch (error: any) {
       this.errorMsg.set(error.message || 'Failed to create organization. Please try again.');
     } finally {

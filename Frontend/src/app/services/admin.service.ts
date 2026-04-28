@@ -45,4 +45,16 @@ export class AdminService {
     );
     return response.data;
   }
+
+  async getUsers() {
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/users`, { headers }));
+    return response.data;
+  }
+
+  async getOrganizations() {
+    const headers = await this.getHeaders();
+    const response = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/organizations`, { headers }));
+    return response.data;
+  }
 }

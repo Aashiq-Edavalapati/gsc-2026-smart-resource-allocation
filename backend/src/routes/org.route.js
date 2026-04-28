@@ -52,4 +52,7 @@ router.post('/:id/verify-otp', requireOrgRole(['OWNER']), orgController.verifyOt
 // ---------- DASHBOARD ----------
 router.get('/:id/dashboard', requireOrgRole(['ADMIN', 'OWNER']), orgController.getOrgDashboard);
 
+// ---------- FIELD REPORTS ----------
+router.get('/:id/field-reports', requireOrgRole(['ADMIN', 'OWNER', 'MEMBER']), orgController.getFieldReports);
+
 export default router;

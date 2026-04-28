@@ -303,7 +303,7 @@ export const getSuggestedTasks = async (orgId) => {
   return prisma.task.findMany({
     where: {
       issue: { ownerOrgId: orgId },
-      approvalStatus: 'SUGGESTED'
+      approvalStatus: { in: ['SUGGESTED', 'APPROVED'] }
     },
     include: {
       issue: {

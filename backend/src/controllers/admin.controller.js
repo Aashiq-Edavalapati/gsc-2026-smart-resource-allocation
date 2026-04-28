@@ -29,3 +29,17 @@ export const getStats = async (req, res) => {
     res.json({ success: true, data: stats });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
+
+export const getUsers = async (req, res) => {
+  try {
+    const users = await adminService.getAllUsers();
+    res.json({ success: true, data: users });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+};
+
+export const getOrganizations = async (req, res) => {
+  try {
+    const orgs = await adminService.getAllOrgs();
+    res.json({ success: true, data: orgs });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+};
